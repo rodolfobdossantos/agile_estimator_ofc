@@ -1,3 +1,9 @@
+# Ignora variáveis de ambiente (segurança)
 .env
-venv/
+
+# Ignora o arquivo de anotações
 anotacoes-agile-estimator.txt
+
+# Ignora ambiente virtual
+venv/
+
