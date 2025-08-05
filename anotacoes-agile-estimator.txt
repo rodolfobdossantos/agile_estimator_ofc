@@ -1,0 +1,14 @@
+API TRELLO:
+key > caaa36e156d09c5650ed23cf3a8ddf05
+segredo > 29b7b05fe6ece9beb57443a60faeb91f13d6c3eb979884d16f97d4f036823952
+token > ATTA6aa44fc28e1089c7a362ff0c2628289d81f633a997ca0a6b9b67b988864c8317F78450D6
+
+ADD .env no gitignore
+
+
+• agile_estimator (ID: 6891356a01e4dbb84aeef7b1)
+• Meu quadro do Trello (ID: 689135416dbd5416a88e3239)
+
+
+https://trello.com/1/authorize?expiration=never&name=AgileEstimator&scope=read,write&response_type=token&key=caaa36e156d09c5650ed23cf3a8ddf0
+
