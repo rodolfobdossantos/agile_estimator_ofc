@@ -1,3 +1,6 @@
+token git:
+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
+
 API TRELLO:
 key > caaa36e156d09c5650ed23cf3a8ddf05
 segredo > 29b7b05fe6ece9beb57443a60faeb91f13d6c3eb979884d16f97d4f036823952
