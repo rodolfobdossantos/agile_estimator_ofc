@@ -1,0 +1,28 @@
+Listas:
+- id
+- name
+- idBoard
+- pos
+- closed
+- subscribed
+- cards
+
+Cards:
+- id
+- name
+- url
+- due
+- labels
+- members
+	- id
+	- username
+	- fullName
+- customFieldItems
+	- id
+	- name
+	- value
+	- idValue
+	- idCustomField
+	- idModel
+	- modelType
+- actions
