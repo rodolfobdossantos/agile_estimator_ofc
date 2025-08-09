@@ -1,4 +1,4 @@
-﻿list_id,list_name,card_id,card_name,card_url,card_due,card_labels,card_members,custom_Priority,card_comments
-6891356a01e4dbb84aeef7f6,A fazer,689141723404eee63cbbaa45,Teste a fazer,https://trello.com/c/eGNgf6sC/1-teste-a-fazer,2025-08-05T21:00:00.000Z,Fix,joaovictorgabriel1601,6893e4092c7e8d4b10c08555,
+﻿list_id,list_name,card_id,card_name,card_url,card_due,card_labels,card_members,custom_StoryPoint,card_comments
+6891356a01e4dbb84aeef7f6,A fazer,689141723404eee63cbbaa45,Teste a fazer,https://trello.com/c/eGNgf6sC/1-teste-a-fazer,2025-08-05T21:00:00.000Z,Bugs,joaovictorgabriel1601,Story Point para exemplo de coleta de dados específicos de um card no board do trello.,
 6891356a01e4dbb84aeef7f7,Em andamento,689142bd53ea9fc9a66dc030,Teste em andamento,https://trello.com/c/MSnk0uW3/2-teste-em-andamento,2025-08-06T21:00:00.000Z,,,,
 6891356a01e4dbb84aeef7f8,Concluído,689142d753d78083d0e88da8,Teste concluido,https://trello.com/c/0gSbrGNC/3-teste-concluido,2025-08-07T21:00:00.000Z,,,,

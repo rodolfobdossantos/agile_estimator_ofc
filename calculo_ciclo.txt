@@ -1,0 +1,8 @@
+            # Calcular ciclo em dias e horas
+            cycle_time_days_hours = None
+            if completed_date:
+                delta = completed_date - created_date
+                total_hours = delta.total_seconds() // 3600
+                days_part = int(total_hours // 24)
+                hours_part = int(total_hours % 24)
+                cycle_time_days_hours = f"{days_part}d {hours_part}h"

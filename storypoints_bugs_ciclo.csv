@@ -1,0 +1,4 @@
+﻿list_id,list_name,card_id,card_name,created_date,completed_date,cycle_time_days_hours,card_labels,custom_StoryPoint
+6891356a01e4dbb84aeef7f8,Concluído,689142d753d78083d0e88da8,Teste concluido,2025-08-04T23:31:35+00:00,2025-08-07T21:00:00+00:00,2d 21h,Bugs,Apenas mais um teste de story point para coleta de dados via api
+6891356a01e4dbb84aeef7f8,Concluído,689141723404eee63cbbaa45,Teste a fazer,2025-08-04T23:25:38+00:00,2025-08-05T21:00:00+00:00,0d 21h,Bugs,Story Point para exemplo de coleta de dados específicos de um card no board do trello.
+6891356a01e4dbb84aeef7f8,Concluído,689142bd53ea9fc9a66dc030,Teste em andamento,2025-08-04T23:31:09+00:00,2025-08-06T21:00:00+00:00,1d 21h,Bugs,Apenas mais um teste de story point para coleta de dados via api
