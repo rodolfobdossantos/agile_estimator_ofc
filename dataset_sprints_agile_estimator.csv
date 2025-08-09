@@ -1,0 +1,11 @@
+sprint_id,data_inicio,data_fim,qtd_membros,duracao_dias,cartoes_previstos,cartoes_entregues,story_points_previstos,story_points_entregues,tipo_dominio,complexidade_media,percentual_bugs,percentual_retrabalho,velocidade_passada,produtividade_estimada
+Sprint_01,2025-01-01,2025-01-15,6,14,22,20,65,51,Dados,4.5,0.16,0.18,57.98,10.83
+Sprint_02,2025-01-15,2025-01-29,7,14,20,15,129,122,Mobile,2.4,0.21,0.12,52.44,18.43
+Sprint_03,2025-01-29,2025-02-12,4,14,50,38,102,91,API,3.2,0.06,0.06,51.3,25.5
+Sprint_04,2025-02-12,2025-02-26,3,14,38,28,67,48,Dados,2.3,0.05,0.19,61.18,22.33
+Sprint_05,2025-02-26,2025-03-12,3,14,26,20,106,96,Dados,2.2,0.11,0.14,37.19,35.33
+Sprint_06,2025-03-12,2025-03-26,5,14,46,33,94,81,Web,4.3,0.23,0.19,54.62,18.8
+Sprint_07,2025-03-26,2025-04-09,3,14,25,22,94,88,API,3.3,0.07,0.14,44.23,31.33
+Sprint_08,2025-04-09,2025-04-23,6,14,46,45,118,105,Dados,1.9,0.12,0.14,65.05,19.67
+Sprint_09,2025-04-23,2025-05-07,4,14,49,44,104,76,Mobile,3.5,0.21,0.07,63.41,26.0
+Sprint_10,2025-05-07,2025-05-21,4,14,30,23,116,81,API,1.7,0.24,0.05,49.84,29.0
