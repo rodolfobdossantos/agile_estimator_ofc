@@ -1,0 +1,6 @@
+﻿Dado Necessário,Obtido via API?,Observações,Limitação,Alternativa Viável
+Tempo de ciclo,Parcial,Exige cálculo com ID e dateLastActivity,Tempo de ciclo,Calcular com base no timestamp do ID do cartão + dateLastActivity
+Story points,Parcial,Só aparece se configurado como custom field,Bugs e retrabalho,Criar processo padrão de uso de labels nos boards reais
+Retrabalho,❌,Não disponível diretamente,Story points ausentes,Simular sprints com story points para treino inicial
+Complexidade,Parcial,Só aparece se configurado como custom field,Complexidade não disponível,Criar campo manual ou estimar com base no título/tamanho do texto (NLP futuro)
+Tipo de tarefa,Parcial,Depende do uso consistente de labels,,
