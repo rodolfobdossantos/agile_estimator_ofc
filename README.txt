@@ -1,1 +1,0 @@
-- Foi criado o script python "get_lists_trello" para puxar os dados de name e id de cada lista em um board específico
