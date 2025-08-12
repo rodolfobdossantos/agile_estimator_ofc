@@ -1,53 +1,87 @@
-# Configuração de Credenciais
+# Extração de Dados do Trello
 
-## 1. Obter chave e token do Trello
-Para autenticar na API do Trello, você precisará de uma **API Key** e um **Token de Acesso**.
+Este projeto contém dois scripts em Python para interagir com a API do Trello:
 
-- **API Key**:  
-  Acesse [https://trello.com/app-key](https://trello.com/app-key) e copie o valor exibido em **Key**.
-- **Token**:  
-  Na mesma página, clique no link **"Token"** para gerar um token de acesso.  
-  Certifique-se de conceder permissões de leitura (`Allow read`).
-
-> ⚠️ **Importante:** guarde esses dados em local seguro e nunca compartilhe publicamente.
+- **`get_lists_trello.py`** → Obtém todas as listas de um board e salva em CSV.
+- **`extrair_cartoes_por_lista.py`** → Extrai todos os cartões de cada lista, incluindo campos customizados e comentários, e salva em CSV.
 
 ---
 
-## 2. Criar o arquivo `.env`
-O projeto já contém um modelo `.env.example` sem valores.  
-Siga os passos abaixo:
+## 1. Como chamar as funções (exemplos de uso)
 
+> Os scripts usam variáveis definidas no `.env`:  
+> `TRELLO_KEY`, `TRELLO_TOKEN`, `BOARD_ID`.
+
+### Obter listas do board
 ```bash
-cp .env.example .env
+python get_lists_trello.py
+```
+Saída esperada:
+```
+✅ CSV salvo com sucesso: listas_boards.csv
 ```
 
-Edite o arquivo `.env` preenchendo com suas credenciais:
-
-```dotenv
-TRELLO_API_KEY=sua_api_key_aqui
-TRELLO_TOKEN=seu_token_aqui
-BOARD_ID=seu_board_id_aqui
-```
-
----
-
-## 3. Testar se as variáveis foram carregadas
-Execute o script de teste para validar o carregamento das credenciais:
-
+### Extrair cartões por lista
 ```bash
-python scripts/test_env.py
+python extrair_cartoes_por_lista.py
 ```
-
-Se tudo estiver correto, a saída será semelhante a:
-
+Saída esperada:
 ```
-OK: Variáveis de ambiente carregadas (TRELLO_API_KEY, TRELLO_TOKEN, BOARD_ID).
+✅ Arquivo 'cartoes_por_lista.csv' gerado com sucesso!
 ```
 
 ---
 
-## 4. Avisos de Segurança
-- **NUNCA** faça commit do arquivo `.env` no repositório.
-- O `.env` já está listado no `.gitignore`, mas revise antes de versionar.
-- Caso uma chave/token seja exposta, **revogue e gere uma nova** imediatamente em [https://trello.com/app-key](https://trello.com/app-key).
-- Não compartilhe credenciais em screenshots, commits ou mensagens.
+## 2. Descrição dos campos retornados
+
+### `listas_boards.csv`
+| Campo        | Descrição |
+|--------------|-----------|
+| board_name   | Nome do board |
+| board_id     | ID do board |
+| list_name    | Nome da lista |
+| list_id      | ID da lista |
+
+---
+
+### `cartoes_por_lista.csv`
+| Campo               | Descrição |
+|---------------------|-----------|
+| list_id             | ID da lista onde o cartão está |
+| list_name           | Nome da lista |
+| card_id             | ID do cartão |
+| card_name           | Nome/título do cartão |
+| card_url            | URL do cartão no Trello |
+| card_due            | Data de entrega (se definida) |
+| card_labels         | Lista de labels associadas |
+| card_members        | Membros atribuídos ao cartão |
+| custom_*            | Campos customizados do board (prefixados com `custom_`) |
+| card_comments       | Comentários do cartão (separados por `" | "`) |
+
+> **Obs.:** Os nomes dos campos customizados vêm do board. Caso um campo não tenha nome mapeado, será usado `custom_<id>`.
+
+---
+
+## 3. Observações sobre rate limit e retries
+
+- A API do Trello impõe um **rate limit de ~100 requisições por 10 segundos** para usuários autenticados.
+- Caso haja muitos cartões/listas, é possível atingir o limite, resultando em erro **HTTP 429**.
+- **Melhores práticas**:
+  - Inserir `time.sleep()` entre requisições ao iterar muitas listas/cartões.
+  - Implementar lógica de **retry com backoff exponencial** para requisições que retornarem 429 ou erros de rede.
+  - Evitar chamadas desnecessárias (reaproveitar dados já obtidos quando possível).
+
+---
+
+## 4. Dependências
+
+Instalar dependências:
+```bash
+pip install python-dotenv requests pandas
+```
+
+---
+
+## 5. Arquivos gerados
+- `listas_boards.csv` → Listas do board.
+- `cartoes_por_lista.csv` → Cartões de cada lista, com campos customizados e comentários.
