@@ -1,87 +1,69 @@
-# Extração de Dados do Trello
+# Extração de Cartões por Lista - Trello
 
-Este projeto contém dois scripts em Python para interagir com a API do Trello:
-
-- **`get_lists_trello.py`** → Obtém todas as listas de um board e salva em CSV.
-- **`extrair_cartoes_por_lista.py`** → Extrai todos os cartões de cada lista, incluindo campos customizados e comentários, e salva em CSV.
+Este script permite extrair todos os cartões de um board do Trello, incluindo campos customizados e comentários, salvando o resultado em um arquivo CSV.
 
 ---
 
-## 1. Como chamar as funções (exemplos de uso)
+## 1. Comando para executar
 
-> Os scripts usam variáveis definidas no `.env`:  
-> `TRELLO_KEY`, `TRELLO_TOKEN`, `BOARD_ID`.
-
-### Obter listas do board
 ```bash
-python get_lists_trello.py
-```
-Saída esperada:
-```
-✅ CSV salvo com sucesso: listas_boards.csv
+python extrair_cartoes_por_lista.py --board-id <ID_DO_BOARD>
 ```
 
-### Extrair cartões por lista
-```bash
-python extrair_cartoes_por_lista.py
-```
-Saída esperada:
-```
-✅ Arquivo 'cartoes_por_lista.csv' gerado com sucesso!
+> **Obs.:** O script atual lê o `BOARD_ID` do arquivo `.env`. Se preferir passar via parâmetro, adapte o código para receber `sys.argv`.
+
+Certifique-se de que o `.env` contém:
+
+```dotenv
+TRELLO_KEY=sua_chave_aqui
+TRELLO_TOKEN=seu_token_aqui
+BOARD_ID=seu_board_id_aqui
 ```
 
 ---
 
-## 2. Descrição dos campos retornados
+## 2. Dicionário de colunas
 
-### `listas_boards.csv`
-| Campo        | Descrição |
-|--------------|-----------|
-| board_name   | Nome do board |
-| board_id     | ID do board |
-| list_name    | Nome da lista |
-| list_id      | ID da lista |
+O arquivo `cartoes_por_lista.csv` conterá as seguintes colunas (mais colunas extras para campos customizados):
 
----
-
-### `cartoes_por_lista.csv`
-| Campo               | Descrição |
-|---------------------|-----------|
-| list_id             | ID da lista onde o cartão está |
-| list_name           | Nome da lista |
-| card_id             | ID do cartão |
-| card_name           | Nome/título do cartão |
-| card_url            | URL do cartão no Trello |
-| card_due            | Data de entrega (se definida) |
-| card_labels         | Lista de labels associadas |
-| card_members        | Membros atribuídos ao cartão |
-| custom_*            | Campos customizados do board (prefixados com `custom_`) |
-| card_comments       | Comentários do cartão (separados por `" | "`) |
-
-> **Obs.:** Os nomes dos campos customizados vêm do board. Caso um campo não tenha nome mapeado, será usado `custom_<id>`.
+| Coluna             | Descrição |
+|--------------------|-----------|
+| list_id            | ID da lista onde o cartão está |
+| list_name          | Nome da lista |
+| card_id            | ID do cartão |
+| card_name          | Nome/título do cartão |
+| card_url           | URL pública do cartão |
+| card_due           | Data de entrega do cartão (se houver) |
+| card_labels        | Labels associadas ao cartão (separadas por vírgula) |
+| card_members       | Membros atribuídos ao cartão (nomes completos, separados por vírgula) |
+| custom_*           | Campos customizados do board (prefixo `custom_` seguido do nome ou ID do campo) |
+| card_comments      | Comentários do cartão (separados por ` | `) |
 
 ---
 
-## 3. Observações sobre rate limit e retries
+## 3. Como configurar listas, labels e aliases
 
-- A API do Trello impõe um **rate limit de ~100 requisições por 10 segundos** para usuários autenticados.
-- Caso haja muitos cartões/listas, é possível atingir o limite, resultando em erro **HTTP 429**.
-- **Melhores práticas**:
-  - Inserir `time.sleep()` entre requisições ao iterar muitas listas/cartões.
-  - Implementar lógica de **retry com backoff exponencial** para requisições que retornarem 429 ou erros de rede.
-  - Evitar chamadas desnecessárias (reaproveitar dados já obtidos quando possível).
+O script **não filtra** listas ou labels por padrão — ele busca todos os cartões de todas as listas do board informado.
 
----
+Para configurar:
+- **Filtrar listas específicas:** adicione lógica antes do loop principal para verificar `list_name` ou `list_id`.
+- **Filtrar por labels:** adicione filtro dentro do loop de cartões verificando `card_labels`.
+- **Aliases de listas/labels:** crie um dicionário no código mapeando nomes reais para apelidos, por exemplo:
 
-## 4. Dependências
-
-Instalar dependências:
-```bash
-pip install python-dotenv requests pandas
+```python
+aliases_listas = {
+    "To Do": "A Fazer",
+    "Doing": "Em Progresso"
+}
+list_name = aliases_listas.get(list_name, list_name)
 ```
 
 ---
 
-## 5. Arquivos gerados
-- `listas_boards.csv` → Listas do board.
-- `cartoes_por_lista.csv` → Cartões de cada lista, com campos customizados e comentários.
+## 4. Limitações conhecidas
+
+- **Rate Limit**: a API do Trello limita requisições (aprox. 100 por 10 segundos). Em boards grandes, pode ocorrer erro HTTP 429.
+- **Paginação**: o script não implementa paginação para comentários ou campos customizados muito extensos.
+- **Campos customizados**: apenas o primeiro valor (texto/número/opção) é capturado.
+- **Dependência do `.env`**: atualmente, o script depende de variáveis definidas no `.env`. Não há suporte direto para parâmetros via CLI.
+- **Ausência de retries**: em caso de erro temporário de rede ou limite excedido, o script falha sem tentar novamente.
