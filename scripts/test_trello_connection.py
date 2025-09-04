@@ -12,6 +12,7 @@ BOARD_ID = os.getenv("BOARD_ID")
 
 # Endpoint da API para obter listas do board
 url = f"https://api.trello.com/1/boards/{BOARD_ID}/lists"
+
 params = {
     "key": TRELLO_KEY,
     "token": TRELLO_TOKEN
