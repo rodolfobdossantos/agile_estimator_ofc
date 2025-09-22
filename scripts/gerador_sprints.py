@@ -57,7 +57,7 @@ def gerar_sprint(sprint_num, data_inicio, duracao_min=10, duracao_max=21):
     }
 
 # Função principal que gera N sprints e salva os dados em .csv e .xlsx
-def gerar_dataset_sprints(qtd_sprints=5):
+def gerar_dataset_sprints(qtd_sprints=5, path_csv="sprints_simuladas.csv", path_excel="sprints_formatadas.xlsx"):
     dados = []
     data_base = date(2025, 1, 1)
 
@@ -72,10 +72,10 @@ def gerar_dataset_sprints(qtd_sprints=5):
     df = pd.DataFrame(dados)
 
     # Salva em CSV (sem formatação)
-    df.to_csv("sprints_simuladas.csv", index=False)
+    df.to_csv(path_csv, index=False)
 
     # Salva em Excel com formatação de cabeçalhos
-    with pd.ExcelWriter("sprints_formatadas_teste.xlsx", engine="openpyxl") as writer:
+    with pd.ExcelWriter(path_excel, engine="openpyxl") as writer:
         df.to_excel(writer, sheet_name="Sprints", index=False)
         sheet = writer.sheets["Sprints"]
 
@@ -90,4 +90,4 @@ def gerar_dataset_sprints(qtd_sprints=5):
 
 # Executa a função principal se for chamado diretamente
 if __name__ == "__main__":
-    gerar_dataset_sprints(qtd_sprints=5000)
+    gerar_dataset_sprints(qtd_sprints=100, path_csv="sprints_teste.csv", path_excel="sprints_teste.xlsx")
