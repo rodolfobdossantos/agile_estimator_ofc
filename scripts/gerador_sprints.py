@@ -90,4 +90,4 @@ def gerar_dataset_sprints(qtd_sprints=5, path_csv="sprints_simuladas.csv", path_
 
 # Executa a função principal se for chamado diretamente
 if __name__ == "__main__":
-    gerar_dataset_sprints(qtd_sprints=100, path_csv="sprints_teste.csv", path_excel="sprints_teste.xlsx")
+    gerar_dataset_sprints(qtd_sprints=100, path_csv="sprints_teste_2.csv", path_excel="sprints_teste.xlsx")

@@ -265,16 +265,6 @@ Um estimador de produtividade de equipes ágeis com base em dados históricos do
 3. Explore as visualizações interativas.  
 4. Baixe os resultados.  
 
-**Colunas necessárias no CSV:**  
-- qtd_membros  
-- cartoes_previstos  
-- story_points_previstos  
-- tipo_dominio  
-- complexidade_media  
-- percentual_bugs  
-- percentual_retrabalho  
-- velocidade_passada  
-- produtividade_estimada  
 """)
 
 st.markdown("---")

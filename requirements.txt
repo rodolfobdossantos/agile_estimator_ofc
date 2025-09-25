@@ -104,3 +104,5 @@ websocket-client==1.8.0
 widgetsnbextension==4.0.14
 openpyxl==3.1.5
 matplotlib==3.10.5
+scikit-learn==1.7.1
+streamlit==1.49.1
