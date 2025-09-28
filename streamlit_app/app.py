@@ -7,8 +7,6 @@ import altair as alt
 import os
 import re
 
-from scripts.get_public_trello_board import get_trello_cards_public
-
 # -------------------------------
 # Funções auxiliares
 # -------------------------------
@@ -123,7 +121,7 @@ if  uploaded_file is not None:
 
     # guarda os dados brutos no session_state
     if "data" not in st.session_state:
-        
+
         st.session_state.data = data.copy()
 
     # Tabs
