@@ -86,7 +86,7 @@ st.markdown("""
 
 st.set_page_config(page_title="Agile Estimator", layout="wide")
 st.title("🚀 Agile Estimator")
-st.write("Estimativa de produtividade baseada em dados históricos do Trello.")
+st.write("Estimativa de produtividade baseada em dados históricos.")
 
 csv, trello = st.tabs(["Upload CSV", "Puxar do Trello"])
 
