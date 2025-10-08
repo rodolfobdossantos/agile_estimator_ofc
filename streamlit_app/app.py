@@ -324,7 +324,7 @@ st.sidebar.title("ℹ️ FAQ")
 
 st.sidebar.markdown("""
 **O que é este aplicativo?**  
-Um estimador de produtividade de equipes ágeis com base em dados históricos do Trello.  
+Um estimador de produtividade de equipes ágeis utilizando técnicas de Inteligência Artificial.  
 
 **Como usar?**  
 1. Carregue seu CSV.  
