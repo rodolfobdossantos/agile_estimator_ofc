@@ -6,6 +6,7 @@ import joblib
 import altair as alt
 import os
 import re
+import math
 
 # -------------------------------
 # Funções auxiliares
@@ -84,15 +85,53 @@ st.markdown("""
 # Interface principal
 # -------------------------------
 
+
 st.set_page_config(page_title="Agile Estimator", layout="wide")
+
 st.title("🚀 Agile Estimator")
 st.write("Estimativa de produtividade baseada em dados históricos.")
 
-csv, trello = st.tabs(["Upload CSV", "Puxar do Trello"])
 
+tutorial, input, csv, trello = st.tabs(["Tutorial","Input Manual", "Upload CSV", "Puxar do Trello"])
+
+with tutorial:
+    st.title("📖 Tutorial do Agile Estimator")
+    st.write("Nesta tela você verá como preencher cada coluna de input e o que esperar de output do projeto.")
+
+    st.subheader("💡 Inputs necessários")
+    st.markdown("""
+    - **ID da Sprint**: Identificador único da sprint.
+    - **Quantidade de Membros**: Número de integrantes do time.
+    - **Complexidade Média (%)**: Média da complexidade das tasks na Sprint.
+    - **Tipo de Domínio**: Web, Mobile, API ou Dados.
+    - **Produtividade Estimada**: Valor histórico estimado de produtividade.
+    - **Story Points Previstos**: Pontos estimados para a sprint.
+    - **Cartões Previsto**: Número de tasks planejadas para a sprint.
+    - **Percentual de Bugs**: Taxa de bugs esperada (0 a 1).
+    - **Percentual de Retrabalho**: Taxa de retrabalho esperada (0 a 1).
+    """)
+
+    st.subheader("💡 Outputs do projeto")
+    st.markdown("""
+    - **Produtividade Prevista**: Estimativa da produtividade da sprint baseada no modelo.
+    - **Visualizações**: Gráficos interativos mostrando distribuição, evolução por sprint, boxplots e relações com bugs e retrabalho.
+    - **Download CSV**: Permite baixar os dados com a produtividade prevista.
+    """)
+# --- ABA UPLOAD CSV ---
 with csv:
     uploaded_file = st.file_uploader("📂 Carregue seu arquivo CSV", type="csv")
 
+    if uploaded_file is not None:
+        data = pd.read_csv(uploaded_file)
+        st.session_state.data = data.copy()
+        st.session_state.last_source = "csv"
+        st.success("✅ CSV carregado e salvo com sucesso!")
+        # st.dataframe(st.session_state.data)
+    else:
+        st.info("📁 Nenhum CSV carregado.")
+
+
+# --- ABA GET TRELLO ---
 with trello:
 
     uploaded_trello = st.text_input(
@@ -106,64 +145,261 @@ with trello:
     if uploaded_trello:
 
         if re.match(trello_regex, uploaded_trello):
+
             st.markdown(f"✅ Link do Trello válido: {uploaded_trello}")
             #  lógica para conectar ao board get_trello_cards_public()
             uploaded_file = uploaded_trello
+                # Exemplo de DataFrame simulado (substitua pela função real depois)
+
+            st.session_state.data = pd.DataFrame([
+                {"sprint_id": "trello_auto", "tipo_dominio": "Web", "qtd_membros": 3,
+                "complexidade_media": 42.5, "produtividade_estimada": 70.0,
+                "story_points_previstos": 50.0, "cartoes_previstos": 8,
+                "percentual_bugs": 0.05, "percentual_retrabalho": 0.03}
+            ])
+            st.session_state.last_source = "trello"
+            st.success("✅ Dados do Trello carregados e armazenados!")
+
 
         else:
             st.error("❌ Link inválido! Certifique-se de que segue o formato: https://api.trello.com/1/boards/<board_id>")
 
+# --- ABA INPUT MANUAL ---
+with input:
+    st.subheader("📝 Inserir dados da Sprint manualmente")
+    st.markdown("Preencha as informações abaixo ou clique em **Usar dados de exemplo** para testar.")
+
+    # Inicializa input_user no session_state (default)
+    if "input_user" not in st.session_state:
+        st.session_state.input_user = {
+            "sprint_id": f"sprint_{np.random.randint(1000,9999)}",
+            "qtd_membros": 1,
+            "complexidade_media": 2.3,
+            "tipo_dominio": "Web",
+            "produtividade_estimada": 119.0,
+            "story_points_previstos": 55.0,
+
+            "cartoes_previstos": 10.0,
+            "percentual_bugs": 0.05,
+            "percentual_retrabalho": 0.03
+        }
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        sprint_id = st.text_input("🆔 ID da Sprint", value=st.session_state.input_user["sprint_id"])
+
+        if not sprint_id.strip():
+            sprint_id = f"sprint_{np.random.randint(1000,9999)}"
+
+        qtd_membros = st.number_input("👥 Quantidade de Membros",
+                                       min_value=1, step=1, 
+                                       value=st.session_state.input_user["qtd_membros"])
+
+        complexidade_media = st.number_input("⚙️ Complexidade Média (%)",
+                                              min_value=0.0, max_value=1000.0, 
+                                              value=st.session_state.input_user["complexidade_media"], 
+                                              step=1.0)
+
+        cartoes_previstos = st.number_input("🗂️ Cartões previstos (número de cartões/tarefas)", 
+                                            min_value=0.0, 
+                                            step=1.0, 
+                                            value=st.session_state.input_user["cartoes_previstos"])
+
+    with col2:
+
+        tipo_dominio = st.selectbox("🌐 Tipo de Domínio", 
+                                    options=["Web", "Mobile", "API", "Dados"], 
+                                    index=["Web","Mobile","API","Dados"]
+                                    .index(st.session_state.input_user["tipo_dominio"]))
+
+        produtividade_estimada = st.number_input("📈 Produtividade Estimada (%)", 
+                                                 min_value=0.0, max_value=1000.0, 
+                                                 value=st.session_state.input_user["produtividade_estimada"], 
+                                                 step=1.0)
+
+        story_point = st.number_input("📊 Story points previstos para a sprint",
+                                       min_value=0.0, max_value=1000.0, 
+                                       value=st.session_state.input_user["story_points_previstos"], 
+                                       step=1.0)
+
+        percentual_bugs = st.number_input("🐞 Percentual de bugs (0-1)", 
+                                          min_value=0.0, max_value=1.0, 
+                                          value=st.session_state.input_user["percentual_bugs"], 
+                                          step=0.01)
+
+        percentual_retrabalho = st.number_input("🔁 Percentual de retrabalho (0-1)", 
+                                                min_value=0.0, max_value=1.0, 
+                                                value=st.session_state.input_user["percentual_retrabalho"], 
+                                                step=0.01)
+
+    # Atualiza o input_user no session_state
+    st.session_state.input_user = {
+        "sprint_id": sprint_id,
+        "qtd_membros": qtd_membros,
+        "complexidade_media": complexidade_media,
+        "tipo_dominio": tipo_dominio,
+        "produtividade_estimada": produtividade_estimada,
+        "story_points_previstos": story_point,
+        "cartoes_previstos": cartoes_previstos,
+        "percentual_bugs": percentual_bugs,
+        "percentual_retrabalho": percentual_retrabalho
+    }
+
+    c1, c2 = st.columns([1,1])
+
+    with c1:
+        if st.button("✅ Usar esses dados"):
+
+            # Converte tipos numéricos para float (segurança) e grava no session_state
+            df = pd.DataFrame([st.session_state.input_user])
+
+            # opcional: forçar tipos
+            numeric_cols = ["qtd_membros","complexidade_media","produtividade_estimada","story_points_previstos","cartoes_previstos","percentual_bugs","percentual_retrabalho"]
+            for col in numeric_cols:
+                df[col] = pd.to_numeric(df[col], errors="coerce").astype(float)
+
+            st.session_state.data = df.copy()
+            st.success("✅ Dados adicionados com sucesso!")
+            st.session_state.last_source = "form"
+
+
+
+    with c2:
+        if st.button("🔄 Resetar formulário"):
+            st.session_state.input_user = {
+                "sprint_id": f"sprint_{np.random.randint(1000,9999)}",
+                "qtd_membros": 1,
+                "complexidade_media": 0.0,
+                "tipo_dominio": "Web",
+                "produtividade_estimada": 0.0,
+                "story_points_previstos": 0.0,
+                "cartoes_previstos": 0.0,
+                "percentual_bugs": 0.0,
+                "percentual_retrabalho": 0.0
+            }
+            st.session_state.data = None
+            st.info("🧹 Formulário resetado!")
+
+st.markdown("---")
+        
+
 # --- depois do upload do arquivo ---
 
-if  uploaded_file is not None:
-    data = pd.read_csv(uploaded_file)
-    st.success("✅ Dados carregados com sucesso!")
+if st.session_state.get("data") is not None:
 
-    # guarda os dados brutos no session_state
-    if "data" not in st.session_state:
+    if st.button("🧹 Limpar dados") and st.session_state.data is not None:
+        st.session_state.data = None
+        st.session_state.last_source = None
+        st.success("Dados limpos com sucesso!")
 
-        st.session_state.data = data.copy()
+    if "last_source" in st.session_state and st.session_state.last_source is not None:
+        st.info(f"📂 Origem atual dos dados: **{st.session_state.last_source.upper()}**")
+    else:
+        st.info(f"📂 Sem dados carregados no momento") 
+
+
+if "data" in st.session_state and st.session_state.data is not None and not st.session_state.data.empty:
+
 
     # Tabs
     tab1, tab2, tab3 = st.tabs(["📋 Dados", "📈 Estimativas", "📊 Visualizações"])
 
+    # -----------------------------------------------------
+    # TAB 1 — VISUALIZAÇÃO DE DADOS
+    # -----------------------------------------------------
     with tab1:
-        columns = ["sprint_id","data_inicio","qtd_membros","complexidade_media",]
+        st.subheader("📋 Pré-visualização dos dados")
 
-        st.subheader("Pré-visualização dos dados")
-        st.dataframe(st.session_state.data[columns].head(50))
-        st.write(f"Total de registros: {len(st.session_state.data)}")
-        st.dataframe(st.session_state.data.columns,
-                     width=300)  # mostra as colunas carregadas
+        # Define as colunas esperadas dinamicamente
+        columns = [
+            col for col in [
+                "sprint_id",
+                "tipo_dominio",
+                "qtd_membros",
+                "complexidade_media",
+                "produtividade_estimada",
+                "story_points_previstos"
+            ] if col in st.session_state.data.columns
+        ]
 
+        if len(columns) > 0:
+            st.dataframe(st.session_state.data[columns].head(50))
+            st.caption(f"Total de registros: **{len(st.session_state.data)}**")
+        else:
+            st.warning("⚠️ Nenhuma coluna reconhecida foi encontrada nos dados.")
 
+    # -----------------------------------------------------
+    # TAB 2 — ESTIMATIVA
+    # -----------------------------------------------------
     with tab2:
-        
-        if st.button("⚡ Fazer Estimativa"):
+        st.subheader("⚡ Fazer Estimativa")
+
+        if st.button("🚀 Calcular Produtividade Prevista", key="calc_estimativa"):
             try:
-                processed_data = preprocess_input(
-                    st.session_state.data.copy(), scaler, label_encoder
-                )
-                predictions = model.predict(processed_data)
-                st.session_state.data["produtividade_prevista"] = predictions  # <-- GUARDA NO SESSION_STATE
+                df_input = st.session_state.data.copy()
 
-                st.success("✅ Estimativas calculadas!")
-                st.dataframe(st.session_state.data.head(50))
+                # Verifica colunas mínimas do pipeline
+                required_pipeline_cols = [
+                    "qtd_membros", "complexidade_media", "tipo_dominio",
+                    "produtividade_estimada", "story_points_previstos",
+                    "cartoes_previstos", "percentual_bugs", "percentual_retrabalho"
+                ]
 
-                csv = st.session_state.data.to_csv(index=False).encode("utf-8")
-                st.download_button(
-                    label="📥 Baixar resultados",
-                    data=csv,
-                    file_name="estimativas_produtividade.csv",
-                    mime="text/csv",
-                )
+                missing = [c for c in required_pipeline_cols if c not in df_input.columns]
+
+                if missing:
+                    st.error(f"❌ Colunas faltando para o pipeline: {', '.join(missing)}")
+
+                else:
+                    # Tudo ok: preprocessa e prevê
+                    processed_data = preprocess_input(df_input.copy(), scaler, label_encoder)
+
+                    predictions = model.predict(processed_data)
+                    st.session_state.data["produtividade_prevista"] = predictions
+
+                    st.success("✅ Estimativas calculadas com sucesso!")
+
+                    # Mostra pré-visualização das primeiras 5 sprints com produtividade prevista
+                    st.session_state.data["semanas_estimadas"]  = st.session_state.data["produtividade_prevista"] / 7.0
+                    st.session_state.data["semanas_estimadas"] = st.session_state.data["semanas_estimadas"].apply(math.ceil)
+
+                    preview = st.session_state.data[["sprint_id", "produtividade_prevista", "semanas_estimadas"]].head(5).copy()
+
+                    st.markdown("### 📈 Produtividade Prevista das Primeiras Sprints")
+
+                    # Cria uma coluna visual de barras (mini indicador)
+                    preview["Produtividade (Escala)"] = (
+                        preview["produtividade_prevista"]
+                        .apply(lambda x: "█" * int(x / preview["produtividade_prevista"].max() * 20))
+                    )
+
+                    # Exibe a tabela estilizada
+                    st.dataframe(
+                        preview.style.format(
+                            {"produtividade_prevista": "{:.2f}"}
+                        ).set_table_styles(
+                            [
+                                {"selector": "th", "props": [("text-align", "center"), ("background-color", "#0E1117"), ("color", "white")]},
+                                {"selector": "td", "props": [("text-align", "center")]},
+                            ]
+                        ),
+                        use_container_width=True
+                    )
+
+                    csv = st.session_state.data[["sprint_id", "produtividade_prevista", "semanas_estimadas"]].to_csv(index=False).encode("utf-8")
+
+                    st.download_button("📥 Baixar resultados", data=csv, file_name="estimativas_produtividade_dias.csv", mime="text/csv")
+
             except Exception as e:
-                st.error(f"Erro ao processar os dados: {e}")
+                st.exception(e)  # mostra stacktrace legível no Streamlit
 
         with tab3:
             if "produtividade_prevista" in st.session_state.data.columns:
                 data = st.session_state.data.copy()
                 st.subheader("🔎 Filtros")
+
 
                 # ------------------ Filtros persistentes ------------------
                 if "range_filter" not in st.session_state:
@@ -175,13 +411,21 @@ if  uploaded_file is not None:
                 if "dominio_filter" not in st.session_state:
                     st.session_state.dominio_filter = list(data["tipo_dominio"].unique())
 
+                min_val = float(data["produtividade_prevista"].min())
+                max_val = float(data["produtividade_prevista"].max())
+
+                # Corrige caso todos os valores sejam iguais
+                if min_val == max_val:
+                    max_val += 0.001  # margem mínima para o slider não quebrar
+
                 range_filter = st.slider(
                     "Intervalo da produtividade prevista",
-                    float(data["produtividade_prevista"].min()),
-                    float(data["produtividade_prevista"].max()),
-                    st.session_state.range_filter,
+                    min_value=min_val,
+                    max_value=max_val,
+                    value=st.session_state.range_filter,
                     key="range_filter",
                 )
+
 
                 dominio_filter = st.multiselect(
                     "Selecione o(s) domínio(s)",
@@ -310,6 +554,8 @@ if  uploaded_file is not None:
                     ]
                 ).properties(width=600, height=400)
                 st.altair_chart(scatter_chart, use_container_width=True)
+            else:
+                st.warning("⚠️ Por favor, calcule as estimativas primeiro na aba 'Estimativas'.")
 
 
 
@@ -327,7 +573,7 @@ st.sidebar.markdown("""
 Um estimador de produtividade de equipes ágeis utilizando técnicas de Inteligência Artificial.  
 
 **Como usar?**  
-1. Carregue seu CSV.  
+1. Carregue seus dados.  
 2. Clique em **Fazer Estimativa**.  
 3. Explore as visualizações interativas.  
 4. Baixe os resultados.  
