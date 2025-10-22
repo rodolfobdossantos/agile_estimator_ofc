@@ -20,7 +20,8 @@ def input_metrics(data):
 
     data["carga_cartoes_por_membro"] = data["cartoes_previstos"] / data["qtd_membros"]
 
-    # Criar coluna auxiliar com o número da sprint
+    # data["produtividade_estimada"] =  round(data["story_points_previstos"] / data["qtd_membros"], 2)
+    
 
     return data[['produtividade_estimada',
        'tipo_dominio', 'complexidade_media',
@@ -96,27 +97,60 @@ tutorial, input, csv, trello = st.tabs(["Tutorial","Input Manual", "Upload CSV",
 
 with tutorial:
     st.title("📖 Tutorial do Agile Estimator")
-    st.write("Nesta tela você verá como preencher cada coluna de input e o que esperar de output do projeto.")
+    st.write("""
+    Aqui você aprende como preencher cada campo de entrada e entender o que o modelo espera em cada etapa.
+    """)
 
     st.subheader("💡 Inputs necessários")
     st.markdown("""
-    - **ID da Sprint**: Identificador único da sprint.
-    - **Quantidade de Membros**: Número de integrantes do time.
-    - **Complexidade Média (%)**: Média da complexidade das tasks na Sprint.
-    - **Tipo de Domínio**: Web, Mobile, API ou Dados.
-    - **Produtividade Estimada**: Valor histórico estimado de produtividade.
-    - **Story Points Previstos**: Pontos estimados para a sprint.
-    - **Cartões Previsto**: Número de tasks planejadas para a sprint.
-    - **Percentual de Bugs**: Taxa de bugs esperada (0 a 1).
-    - **Percentual de Retrabalho**: Taxa de retrabalho esperada (0 a 1).
+    Esses são os dados essenciais para que o modelo gere uma estimativa precisa da sua sprint:
+
+    - **ID da Sprint** : Um identificador único para diferenciar cada sprint (exemplo: `sprint_1023`).
+
+    - **Quantidade de Membros** : Número de pessoas envolvidas na sprint.
+
+    - **Complexidade Média** : Grau médio de dificuldade das tarefas planejadas — quanto maior o valor, maior o esforço esperado.
+
+    - **Tipo de Domínio** : Área principal do projeto: **Web**, **Mobile**, **API** ou **Dados**.
+
+    - **Story Points Previstos**: Total de pontos estimados para as tarefas da sprint.
+
+    - **Cartões Previstos**: Quantidade total de tarefas (tasks) planejados para o período.
+
+    ---
     """)
 
-    st.subheader("💡 Outputs do projeto")
+    st.subheader("⚙️ Inputs adicionais (opcionais)")
     st.markdown("""
-    - **Produtividade Prevista**: Estimativa da produtividade da sprint baseada no modelo.
-    - **Visualizações**: Gráficos interativos mostrando distribuição, evolução por sprint, boxplots e relações com bugs e retrabalho.
-    - **Download CSV**: Permite baixar os dados com a produtividade prevista.
+    Esses campos ajudam o modelo a entender melhor a qualidade e o esforço da sua sprint.
+
+    - **Percentual de Bugs (0 a 1)**  
+    Indique a proporção aproximada de tarefas que geram bugs.  
+    Exemplo: `0.05` → cerca de **5%** das entregas precisam de correção.
+
+    - **Percentual de Retrabalho (0 a 1)**  
+    Informe quanto trabalho costuma ser refeito ou ajustado após a entrega.  
+    Exemplo: `0.03` → cerca de **3%** das tarefas exigem retrabalho.
     """)
+
+    st.info("📝 **Dica:** Se não tiver esses dados, deixe como **0**. O sistema ainda funcionará normalmente — esses valores apenas ajudam a tornar a previsão mais precisa.")
+    st.markdown("---")
+
+
+    st.subheader("📊 Outputs do projeto")
+    st.markdown("""
+    Aqui você confere o que o modelo gera a partir dos dados informados:
+
+    - **Produtividade Prevista** : Estimativa do tempo de coonclusão (em dias) da sprint com base nas variáveis inseridas. Ajuda a visualizar se o time está dentro da capacidade esperada.
+
+    - **Visualizações Interativas** : Gráficos que mostram a **evolução da produtividade**, **distribuições**, e **relações com bugs e retrabalho** — tudo de forma dinâmica para facilitar a análise.
+
+    - **Download CSV** : Exporte os resultados em formato `.csv` para análises adicionais ou integração com outras ferramentas.
+
+    ---
+    📊 **Insight:** use essas visualizações para identificar padrões e gargalos entre sprints — isso ajuda a ajustar estimativas futuras com mais precisão.
+    """)
+
 # --- ABA UPLOAD CSV ---
 with csv:
     uploaded_file = st.file_uploader("📂 Carregue seu arquivo CSV", type="csv")
@@ -176,7 +210,7 @@ with input:
             "qtd_membros": 1,
             "complexidade_media": 2.3,
             "tipo_dominio": "Web",
-            "produtividade_estimada": 119.0,
+            #"produtividade_estimada": 119.0,
             "story_points_previstos": 55.0,
 
             "cartoes_previstos": 10.0,
@@ -197,8 +231,8 @@ with input:
                                        min_value=1, step=1, 
                                        value=st.session_state.input_user["qtd_membros"])
 
-        complexidade_media = st.number_input("⚙️ Complexidade Média (%)",
-                                              min_value=0.0, max_value=1000.0, 
+        complexidade_media = st.number_input("⚙️ Complexidade Média (0-100)",
+                                              min_value=0.0, max_value=100.0, 
                                               value=st.session_state.input_user["complexidade_media"], 
                                               step=1.0)
 
@@ -214,10 +248,7 @@ with input:
                                     index=["Web","Mobile","API","Dados"]
                                     .index(st.session_state.input_user["tipo_dominio"]))
 
-        produtividade_estimada = st.number_input("📈 Produtividade Estimada (%)", 
-                                                 min_value=0.0, max_value=1000.0, 
-                                                 value=st.session_state.input_user["produtividade_estimada"], 
-                                                 step=1.0)
+        # produtividade_estimada = st.number_input("📈 Produtividade Estimada (%)", min_value=0.0, max_value=1000.0, value=st.session_state.input_user["produtividade_estimada"], step=1.0)
 
         story_point = st.number_input("📊 Story points previstos para a sprint",
                                        min_value=0.0, max_value=1000.0, 
@@ -227,12 +258,14 @@ with input:
         percentual_bugs = st.number_input("🐞 Percentual de bugs (0-1)", 
                                           min_value=0.0, max_value=1.0, 
                                           value=st.session_state.input_user["percentual_bugs"], 
-                                          step=0.01)
+                                          step=1.0)
 
         percentual_retrabalho = st.number_input("🔁 Percentual de retrabalho (0-1)", 
                                                 min_value=0.0, max_value=1.0, 
                                                 value=st.session_state.input_user["percentual_retrabalho"], 
-                                                step=0.01)
+                                                step=1.0)
+        
+    produtividade_estimada = round(story_point / qtd_membros, 2)
 
     # Atualiza o input_user no session_state
     st.session_state.input_user = {
@@ -249,38 +282,50 @@ with input:
 
     c1, c2 = st.columns([1,1])
 
-    with c1:
-        if st.button("✅ Usar esses dados"):
-
-            # Converte tipos numéricos para float (segurança) e grava no session_state
-            df = pd.DataFrame([st.session_state.input_user])
-
-            # opcional: forçar tipos
-            numeric_cols = ["qtd_membros","complexidade_media","produtividade_estimada","story_points_previstos","cartoes_previstos","percentual_bugs","percentual_retrabalho"]
-            for col in numeric_cols:
-                df[col] = pd.to_numeric(df[col], errors="coerce").astype(float)
-
-            st.session_state.data = df.copy()
-            st.success("✅ Dados adicionados com sucesso!")
-            st.session_state.last_source = "form"
 
 
+with c2:
+   
+    empty, b1, b2 = st.columns([0.4, 1, 1])
 
-    with c2:
-        if st.button("🔄 Resetar formulário"):
-            st.session_state.input_user = {
-                "sprint_id": f"sprint_{np.random.randint(1000,9999)}",
-                "qtd_membros": 1,
-                "complexidade_media": 0.0,
-                "tipo_dominio": "Web",
-                "produtividade_estimada": 0.0,
-                "story_points_previstos": 0.0,
-                "cartoes_previstos": 0.0,
-                "percentual_bugs": 0.0,
-                "percentual_retrabalho": 0.0
-            }
-            st.session_state.data = None
-            st.info("🧹 Formulário resetado!")
+    with b1:
+        usar = st.button("✅ Usar esses dados", use_container_width=True)
+    with b2:
+        resetar = st.button("🔄 Resetar formulário", use_container_width=True)
+
+    if usar:
+        df = pd.DataFrame([st.session_state.input_user])
+        numeric_cols = [
+            "qtd_membros",
+            "complexidade_media",
+            "produtividade_estimada",
+            "story_points_previstos",
+            "cartoes_previstos",
+            "percentual_bugs",
+            "percentual_retrabalho"
+        ]
+
+        for col in numeric_cols:
+            df[col] = pd.to_numeric(df[col], errors="coerce").astype(float)
+
+        st.session_state.data = df.copy()
+        st.success("✅ Dados adicionados com sucesso!")
+        st.session_state.last_source = "form"
+
+    if resetar:
+        st.session_state.input_user = {
+            "sprint_id": f"sprint_{np.random.randint(1000,9999)}",
+            "qtd_membros": 1,
+            "complexidade_media": 0.0,
+            "tipo_dominio": "Web",
+            "produtividade_estimada": 0.0,
+            "story_points_previstos": 0.0,
+            "cartoes_previstos": 0.0,
+            "percentual_bugs": 0.0,
+            "percentual_retrabalho": 0.0
+        }
+        st.session_state.data = None
+        st.info("🧹 Formulário resetado!")
 
 st.markdown("---")
         
@@ -319,7 +364,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                 "tipo_dominio",
                 "qtd_membros",
                 "complexidade_media",
-                "produtividade_estimada",
+               #"produtividade_estimada",
                 "story_points_previstos"
             ] if col in st.session_state.data.columns
         ]
