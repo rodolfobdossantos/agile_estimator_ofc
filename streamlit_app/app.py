@@ -298,7 +298,7 @@ with c2:
     empty, b1, b2 = st.columns([0.4, 1, 1])
 
     with b1:
-        usar = st.button("✅ Adiconar Sprint", use_container_width=True)
+        usar = st.button("✅ Adicionar Sprint", use_container_width=True)
     with b2:
         resetar = st.button("🔄 Resetar formulário", use_container_width=True)
 
