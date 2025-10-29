@@ -93,7 +93,7 @@ st.title("🚀 Agile Estimator")
 st.write("Estimativa de produtividade baseada em dados históricos.")
 
 
-tutorial, input, csv, trello = st.tabs(["Tutorial","Input Manual", "Upload CSV", "Puxar do Trello"])
+tutorial, input, csv, trello = st.tabs(["Tutorial","Input Manual", "Upload CSV", "Capturar do Trello (Em desenvolvimento)"])
 
 with tutorial:
     st.title("📖 Tutorial do Agile Estimator")
@@ -111,11 +111,11 @@ with tutorial:
 
     - **Complexidade Média** : Grau médio de dificuldade das tarefas planejadas — quanto maior o valor, maior o esforço esperado.
 
-    - **Tipo de Domínio** : Área principal do projeto: **Web**, **Mobile**, **API** ou **Dados**.
+    - **Tipo de Tecnologia** : Área principal de desenvolvimento: **Web**, **Mobile**, **API** ou **Dados**.
 
-    - **Story Points Previstos**: Total de pontos estimados para as tarefas da sprint.
+    - **Story Points Planejados**: Total de pontos planejados para a execução das tarefas da sprint.
 
-    - **Cartões Previstos**: Quantidade total de tarefas (tasks) planejados para o período.
+    - **Cartões Planejados**: Quantidade total de tarefas (tasks) planejados para o período.
 
     ---
     """)
@@ -124,11 +124,11 @@ with tutorial:
     st.markdown("""
     Esses campos ajudam o modelo a entender melhor a qualidade e o esforço da sua sprint.
 
-    - **Percentual de Bugs (0 a 1)**  
+    - **Percentual de Bugs esperados (0 a 1)**  
     Indique a proporção aproximada de tarefas que geram bugs.  
     Exemplo: `0.05` → cerca de **5%** das entregas precisam de correção.
 
-    - **Percentual de Retrabalho (0 a 1)**  
+    - **Percentual de Retrabalho esperado(0 a 1)**  
     Informe quanto trabalho costuma ser refeito ou ajustado após a entrega.  
     Exemplo: `0.03` → cerca de **3%** das tarefas exigem retrabalho.
     """)
@@ -139,13 +139,22 @@ with tutorial:
 
     st.subheader("📊 Outputs do projeto")
     st.markdown("""
-    Aqui você confere o que o modelo gera a partir dos dados informados:
+    Aqui você pode ver o resultado que o **Agile Estimator** gera com base nas informações que você inseriu:
 
-    - **Produtividade Prevista** : Estimativa do tempo de coonclusão (em dias) da sprint com base nas variáveis inseridas. Ajuda a visualizar se o time está dentro da capacidade esperada.
+    #### **Produtividade Prevista:**  
+                
+    O modelo calcula **quanto o time pode produzir em uma sprint**, considerando uma jornada padrão de **8 horas úteis por dia**.  
+    A partir dos dados fornecidos, ele **estima em quantos dias a sprint deve ser concluída** e mostra **previsões e insights** que ajudam o gestor a entender se a equipe está **dentro da capacidade esperada** ou se há **risco de atraso ou sobrecarga**.  
 
-    - **Visualizações Interativas** : Gráficos que mostram a **evolução da produtividade**, **distribuições**, e **relações com bugs e retrabalho** — tudo de forma dinâmica para facilitar a análise.
+    Essas estimativas permitem **planejar melhor o trabalho**, **ajustar prazos** e **tomar decisões mais assertivas** durante o desenvolvimento do projeto.
 
-    - **Download CSV** : Exporte os resultados em formato `.csv` para análises adicionais ou integração com outras ferramentas.
+    #### **Visualizações Interativas**: 
+    
+    Gráficos que mostram a **evolução da produtividade**, **distribuições**, e **relações com bugs e retrabalho** — tudo de forma dinâmica para facilitar a análise.
+
+    #### **Download CSV**: 
+    
+    Exporte os resultados em formato `.csv` para análises adicionais ou integração com outras ferramentas.
 
     ---
     📊 **Insight:** use essas visualizações para identificar padrões e gargalos entre sprints — isso ajuda a ajustar estimativas futuras com mais precisão.
@@ -243,7 +252,7 @@ with input:
 
     with col2:
 
-        tipo_dominio = st.selectbox("🌐 Tipo de Domínio", 
+        tipo_dominio = st.selectbox("🌐 Tipo de Tecnologia", 
                                     options=["Web", "Mobile", "API", "Dados"], 
                                     index=["Web","Mobile","API","Dados"]
                                     .index(st.session_state.input_user["tipo_dominio"]))
@@ -289,7 +298,7 @@ with c2:
     empty, b1, b2 = st.columns([0.4, 1, 1])
 
     with b1:
-        usar = st.button("✅ Usar esses dados", use_container_width=True)
+        usar = st.button("✅ Adiconar Sprint", use_container_width=True)
     with b2:
         resetar = st.button("🔄 Resetar formulário", use_container_width=True)
 
@@ -307,6 +316,8 @@ with c2:
 
         for col in numeric_cols:
             df[col] = pd.to_numeric(df[col], errors="coerce").astype(float)
+        
+        df = pd.concat([st.session_state.data, df], ignore_index=True) if st.session_state.get("data") is not None else df # Adicona novas sprints ao DataFrame existente ou cria novo
 
         st.session_state.data = df.copy()
         st.success("✅ Dados adicionados com sucesso!")
@@ -363,11 +374,15 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                 "sprint_id",
                 "tipo_dominio",
                 "qtd_membros",
+                "story_points_previstos",
                 "complexidade_media",
-               #"produtividade_estimada",
-                "story_points_previstos"
+                "percentual_bugs",
+                "cartoes_previstos",
+                "percentual_retrabalho",  
             ] if col in st.session_state.data.columns
         ]
+
+        #columns = st.session_state.data.columns
 
         if len(columns) > 0:
             st.dataframe(st.session_state.data[columns].head(50))
@@ -415,7 +430,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                     st.markdown("### 📈 Produtividade Prevista das Primeiras Sprints")
 
                     # Cria uma coluna visual de barras (mini indicador)
-                    preview["Produtividade (Escala)"] = (
+                    preview["Escala de produtividade"] = (
                         preview["produtividade_prevista"]
                         .apply(lambda x: "█" * int(x / preview["produtividade_prevista"].max() * 20))
                     )
@@ -432,6 +447,19 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                         ),
                         use_container_width=True
                     )
+
+                    st.markdown("""
+                        #### ℹ️ Informações adicionais  
+
+                        Aqui está o que cada coluna representa, de forma simples:
+
+                        - **Produtividade Prevista:** mostra a **estimativa de produtividade** calculada pelo *Agile Estimator*, considerando uma jornada de **8 horas úteis por dia**.  
+                        - **Semanas Estimadas:** indica o **tempo total previsto para concluir a sprint**, em **semanas**, sempre **arredondado para cima** para garantir uma margem de segurança.  
+                        - **Escala de Produtividade:** oferece uma **visão comparativa rápida** entre as sprints, mostrando o **tempo relativo de duração** de cada uma.  
+
+                        Essas informações ajudam a **interpretar os resultados** de forma prática e entender **como o modelo projeta o ritmo de trabalho do time**.
+                        """)
+
 
                     csv = st.session_state.data[["sprint_id", "produtividade_prevista", "semanas_estimadas"]].to_csv(index=False).encode("utf-8")
 
@@ -464,7 +492,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                     max_val += 0.001  # margem mínima para o slider não quebrar
 
                 range_filter = st.slider(
-                    "Intervalo da produtividade prevista",
+                    "Intervalo da Produtividade Prevista",
                     min_value=min_val,
                     max_value=max_val,
                     value=st.session_state.range_filter,
@@ -473,7 +501,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
 
 
                 dominio_filter = st.multiselect(
-                    "Selecione o(s) domínio(s)",
+                    "Selecione a(s) Tecnologia(s)",
                     list(data["tipo_dominio"].unique()),
                     default=st.session_state.dominio_filter,
                     key="dominio_filter",
@@ -513,12 +541,12 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
 
 
                 st.subheader("📊 Histograma de Produtividade Prevista")
-                st.caption("Mostra quantas vezes cada nível de produtividade aparece, separado por domínio. Útil para enxergar a distribuição geral.")
+                st.caption("Mostra quantas vezes cada nível de produtividade aparece, separado por Tecnologia. Útil para enxergar a distribuição geral.")
 
                 hist_chart = alt.Chart(chart_data).mark_bar().encode(
                     x=alt.X("produtividade_prevista:Q", bin=alt.Bin(maxbins=20), title="Produtividade Prevista"),
                     y=alt.Y("count()", title="Frequência"),
-                    color="tipo_dominio:N",
+                    color= alt.Color("tipo_dominio:N", title="Tecnologia"),
                     tooltip=["count()", "tipo_dominio"]
                 ).properties(width=600, height=400)
 
@@ -526,13 +554,13 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
 
                 # Boxplot
 
-                st.subheader("📦 Boxplot por Domínio")
-                st.caption("Mostra como a produtividade prevista varia em cada domínio, incluindo valores médios e pontos fora do padrão.")
+                st.subheader("📦 Boxplot por Tecnologia")
+                st.caption("Mostra como a produtividade prevista varia em cada Tecnologia, incluindo valores médios e pontos fora do padrão.")
 
                 box_plot = alt.Chart(chart_data).mark_boxplot().encode(
                     x="tipo_dominio:N", 
                     y=alt.Y("produtividade_prevista:Q", title="Produtividade Prevista"),
-                    color="tipo_dominio:N",
+                    color= alt.Color("tipo_dominio:N", title="Tecnologia"),
                     tooltip=["tipo_dominio", "produtividade_prevista"]
                 ).properties(width=600, height=400)
                 st.altair_chart(box_plot, use_container_width=True)
@@ -545,7 +573,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                 bar_chart = alt.Chart(chart_data).mark_bar().encode(
                     x="qtd_membros:N",
                     y=alt.Y("mean(produtividade_prevista):Q", title="Produtividade Média Prevista"),
-                    color="tipo_dominio:N",
+                    color= alt.Color("tipo_dominio:N", title="Tecnologia"),
                     tooltip=[
                         "qtd_membros",
                         alt.Tooltip("mean(produtividade_prevista):Q", title="Produtividade Média"),
@@ -554,8 +582,8 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                 ).properties(width=600, height=400)
                 st.altair_chart(bar_chart, use_container_width=True)
 
-                st.subheader("🥧 Participação dos Domínios")
-                st.caption("Mostra a proporção de produtividade média de cada domínio em relação ao total. Facilita a comparação entre áreas.")
+                st.subheader("🥧 Participação dos Tecnologias")
+                st.caption("Mostra a proporção de produtividade média de cada Tecnologia em relação ao total. Facilita a comparação entre áreas.")
 
                 pie_data = (
                     chart_data.groupby("tipo_dominio")["produtividade_prevista"]
@@ -565,7 +593,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
 
                 pie_chart = alt.Chart(pie_data).mark_arc().encode(
                     theta="produtividade_prevista",
-                    color="tipo_dominio",
+                    color= alt.Color("tipo_dominio:N", title="Tecnologia"),
                     tooltip=["tipo_dominio", "produtividade_prevista"],
                 )
                 st.altair_chart(pie_chart, use_container_width=True)
@@ -578,7 +606,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                 line_chart = alt.Chart(chart_data).mark_line(point=True).encode(
                     x=alt.X("sprint_id:N", sort=list(chart_data["sprint_id"]), title="Sprint"),
                     y=alt.Y("produtividade_prevista:Q", title="Produtividade Prevista"),
-                    color="tipo_dominio:N",
+                    color= alt.Color("tipo_dominio:N", title="Tecnologia"),
                     tooltip=["sprint_id", "produtividade_prevista", "tipo_dominio"]
                 ).properties(width=600, height=400)
                 st.altair_chart(line_chart, use_container_width=True)
@@ -590,7 +618,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                 scatter_chart = alt.Chart(chart_data).mark_circle(size=60).encode(
                     x=alt.X("produtividade_prevista:Q", title="Produtividade Prevista"),
                     y=alt.Y("percentual_bugs:Q", title="Percentual de Bugs (%)"),
-                    color="tipo_dominio:N",
+                    color= alt.Color("tipo_dominio:N", title="Tecnologia"),
                     tooltip=[
                         alt.Tooltip("percentual_bugs:Q", title="Percentual de Bugs (%)"),
                         alt.Tooltip("percentual_retrabalho:Q", title="Percentual de Retrabalho (%)"),
