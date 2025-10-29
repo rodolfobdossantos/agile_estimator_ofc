@@ -166,6 +166,7 @@ with csv:
 
     if uploaded_file is not None:
         data = pd.read_csv(uploaded_file)
+        data["produtividade_estimada"] = round(data["story_points_previstos"] / data["qtd_membros"], 2)
         st.session_state.data = data.copy()
         st.session_state.last_source = "csv"
         st.success("✅ CSV carregado e salvo com sucesso!")
