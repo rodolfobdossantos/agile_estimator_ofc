@@ -109,13 +109,13 @@ with tutorial:
 
     - **Quantidade de Membros** : Número de pessoas envolvidas na sprint.
 
-    - **Complexidade Média dos requisitos** : Grau médio de dificuldade das tarefas planejadas (0 a 100) — quanto maior o valor, maior o esforço esperado.
+    - **Complexidade Média dos Requisitos** : Grau médio de dificuldade das tarefas planejadas (0 a 100) — quanto maior o valor, maior o esforço esperado.
 
     - **Tipo de Tecnologia** : Área principal de desenvolvimento: **Web**, **Mobile**, **API** ou **Dados**.
 
     - **Story Points Planejados**: Total de pontos planejados para a execução das tarefas da sprint.
 
-    - **Cartões Planejados**: Quantidade total de tarefas (tasks) planejados para o período.
+    - **Cartões Planejados**: Quantidade total de tarefas (tasks) planejadas para o período.
 
     ---
     """)
