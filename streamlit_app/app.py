@@ -109,7 +109,7 @@ with tutorial:
 
     - **Quantidade de Membros** : Número de pessoas envolvidas na sprint.
 
-    - **Complexidade Média dos Requisitos** : Grau médio de dificuldade das tarefas planejadas (0 a 100) — quanto maior o valor, maior o esforço esperado.
+    - **Complexidade Média dos Requisitos** : Grau médio de dificuldade técnica da sprint (0 a 100) — quanto maior o valor, maior a complexidade.
 
     - **Tipo de Tecnologia** : Área principal de desenvolvimento: **Web**, **Mobile**, **API** ou **Dados**.
 
