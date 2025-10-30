@@ -113,7 +113,7 @@ with tutorial:
 
     - **Tipo de Tecnologia** : Área principal de desenvolvimento: **Web**, **Mobile**, **API** ou **Dados**.
 
-    - **Story Points Planejados**: Total de pontos planejados para a execução das tarefas da sprint.
+    - **Story Points Planejados**: Soma de pontos planejados para a execução das tarefas da sprint.
 
     - **Cartões Planejados**: Quantidade total de tarefas (tasks) planejadas para o período.
 
