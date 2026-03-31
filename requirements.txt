@@ -106,3 +106,5 @@ openpyxl==3.1.5
 matplotlib==3.10.5
 scikit-learn==1.7.1
 streamlit==1.49.1
+mlflow==3.10.1
+shap==0.51.0
