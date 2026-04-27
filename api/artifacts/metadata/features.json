@@ -1,0 +1,18 @@
+{
+    "target": "effort_hours",
+    "features": [
+        "function_points",
+        "customer_participation",
+        "logical_complexity",
+        "requirements_volatility",
+        "requirements_quality",
+        "productivity_factors",
+        "installation_ease",
+        "team_technical_capability",
+        "individual_skill",
+        "PC1",
+        "PC2",
+        "PC3",
+        "PC4"
+    ]
+}
