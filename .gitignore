@@ -7,3 +7,7 @@ anotacoes-agile-estimator.txt
 # Ignora ambiente virtual
 venv/
 
+data/raw/*
+__pycache__
+.ipynb_checkpoints
+mlruns
