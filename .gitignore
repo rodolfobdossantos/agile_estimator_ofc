@@ -1,5 +1,7 @@
 # Ignora variáveis de ambiente (segurança)
 .env
+.claude
+.venv
 
 # Ignora o arquivo de anotações
 anotacoes-agile-estimator.txt
