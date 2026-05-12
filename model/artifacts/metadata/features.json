@@ -1,18 +1,58 @@
 {
+    "model": "agile_estimator_v2",
+    "algorithm": "Lasso",
     "target": "effort_hours",
+    "target_transform": "log — model is trained on log(effort_hours); prediction is returned as exp(output)",
     "features": [
         "function_points",
-        "customer_participation",
-        "logical_complexity",
-        "requirements_volatility",
-        "requirements_quality",
-        "productivity_factors",
-        "installation_ease",
-        "team_technical_capability",
-        "individual_skill",
         "PC1",
-        "PC2",
-        "PC3",
-        "PC4"
-    ]
+        "PC2"
+    ],
+    "raw_inputs": {
+        "function_points": {
+            "description": "Adjusted Function Points (AFP) — functional size of the software",
+            "source_column": "Size",
+            "dataset": "Maxwell"
+        },
+        "performance_requirements": {
+            "description": "Demand for performance and speed constraints (Likert 1–5)",
+            "source_column": "T03",
+            "dataset": "Maxwell",
+            "preprocessed_into": ["PC1", "PC2"]
+        },
+        "complex_processing": {
+            "description": "Technical complexity of data processing (Likert 1–5)",
+            "source_column": "T09",
+            "dataset": "Maxwell",
+            "preprocessed_into": ["PC1", "PC2"]
+        },
+        "installation_ease": {
+            "description": "Ease of deployment and installation (Likert 1–5; higher = easier)",
+            "source_column": "T11",
+            "dataset": "Maxwell",
+            "preprocessed_into": ["PC1", "PC2"]
+        },
+        "additional_complexity_factor": {
+            "description": "Additional complexity beyond standard scope (Likert 1–5)",
+            "source_column": "T15",
+            "dataset": "Maxwell",
+            "preprocessed_into": ["PC1", "PC2"]
+        }
+    },
+    "preprocessing_pipeline": {
+        "step_1": "StandardScaler fitted on [performance_requirements, complex_processing, installation_ease, additional_complexity_factor] — artifact: scaler_pca_features.pkl",
+        "step_2": "PCA(n_components=2) — artifact: pca_2.pkl — explains ~70% of variance",
+        "note": "scaler_maxx.pkl is a legacy artifact fitted on 9 ISBSG features; do NOT use it for the 4 Maxwell Likert factors"
+    },
+    "dataset": {
+        "name": "Maxwell",
+        "source": "K.D. Maxwell, Applied Statistics for Software Managers, 2002",
+        "original_rows": 62,
+        "rows_after_outlier_removal": 57,
+        "outlier_method": "IQR on effort_hours (Q3 + 1.5 * IQR)"
+    },
+    "metrics": {
+        "RMSE": 1877,
+        "MAPE": 0.49
+    }
 }
