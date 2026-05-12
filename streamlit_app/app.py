@@ -1,658 +1,688 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import pickle
 import joblib
 import altair as alt
-import os
+import requests
 import re
+import os
 import math
+from scripts_app.get_public_trello_board import get_trello_cards_public, REQUIRED_COLUMNS
 
-# -------------------------------
-# Funções auxiliares
-# -------------------------------
+# ---------------------------------------------------------------
+# Page config — must be the very first Streamlit call
+# ---------------------------------------------------------------
+st.set_page_config(page_title="Agile Estimator v2", layout="wide")
 
-def input_metrics(data):
-
-    data["qtd_bugs"] = data["percentual_bugs"] * data["cartoes_previstos"]
-
-    data["qtd_retrabalho"] = data["percentual_retrabalho"] * data["cartoes_previstos"]
-
-    data["carga_cartoes_por_membro"] = data["cartoes_previstos"] / data["qtd_membros"]
-
-    # data["produtividade_estimada"] =  round(data["story_points_previstos"] / data["qtd_membros"], 2)
-    
-
-    return data[['produtividade_estimada',
-       'tipo_dominio', 'complexidade_media',
-       'qtd_bugs', 'qtd_retrabalho',
-       'carga_cartoes_por_membro']]
-
-def preprocess_input(data, scaler, label_encoder):
-
-    # realizando o encoding do domino e escalonamento da produtividade_estimada
-    data['tipo_dominio'] = label_encoder.transform(data['tipo_dominio'])
-    
-    columns_to_scale = ['produtividade_estimada','story_points_previstos']
-    data[columns_to_scale] = scaler.transform(data[columns_to_scale])
-
-    data = input_metrics(data)
-
-    return data
-
-def load_model(model_path):
-    with open(model_path, 'rb') as file:
-        return pickle.load(file)
-    
-
-# -------------------------------
-# Carregar modelo e transformadores
-# -------------------------------
-
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # streamlit_app/
-ARTIFACTS_DIR = os.path.join(BASE_DIR, "..", "artifacts")
-
-MODEL_PATH = os.path.join(ARTIFACTS_DIR, "model", "agile_estimator.pkl")
-SCALER_PATH = os.path.join(ARTIFACTS_DIR, "scaler", "standard_scaler_produtividade_estimada_story_points_previstos.pkl")
-ENCODER_PATH = os.path.join(ARTIFACTS_DIR, "encoder", "label_encoder_tipo_dominio.pkl")
-
-model = load_model(MODEL_PATH)
-scaler = joblib.load(SCALER_PATH)
-label_encoder = joblib.load(ENCODER_PATH)
-
-
-# CSS para personalizar o tooltip em tema escuro (fundo preto)
+# ---------------------------------------------------------------
+# CSS — dark-theme tooltip
+# ---------------------------------------------------------------
 st.markdown("""
     <style>
-    /* Ícone do tooltip (interrogação) */
     [data-testid="stTooltipIcon"] {
-        color: #FFD700 !important;  /* Amarelo dourado, destaque em fundo preto */
-        font-size: 18px !important; /* Ajusta tamanho do ícone */
-        opacity: 0.9;               /* Leve transparência para suavizar */
+        color: #FFD700 !important;
+        font-size: 18px !important;
+        opacity: 0.9;
     }
-
-    /* Texto do tooltip */
     div[data-baseweb="tooltip"] {
-        background-color: #222 !important;  /* Fundo do balão do tooltip */
-        color: #FFF !important;             /* Texto branco */
-        border: 1px solid #FFD700;          /* Bordas com a mesma cor do ícone */
+        background-color: #222 !important;
+        color: #FFF !important;
+        border: 1px solid #FFD700;
         font-size: 14px !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# -------------------------------
-# Interface principal
-# -------------------------------
+# ---------------------------------------------------------------
+# Load preprocessing artifacts (cached across reruns)
+# ---------------------------------------------------------------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PREP_DIR = os.path.join(BASE_DIR, "..", "api", "artifacts", "preprocessing")
+
+@st.cache_resource
+def load_artifacts():
+    # scaler_pca_features.pkl: StandardScaler for the 4 Maxwell Likert factors
+    # scaler_maxx.pkl: 9-feature Maxwell scaler; index 0 is function_points (mean=514.86, scale=516.24)
+    # The processed CSV already has standardized function_points, so inference must match that transform
+    scaler    = joblib.load(os.path.join(PREP_DIR, "scaler_pca_features.pkl"))
+    pca       = joblib.load(os.path.join(PREP_DIR, "pca_2.pkl"))
+    scaler_fp = joblib.load(os.path.join(PREP_DIR, "scaler_maxx.pkl"))
+    fp_mean   = float(scaler_fp.mean_[0])
+    fp_scale  = float(scaler_fp.scale_[0])
+    return scaler, pca, fp_mean, fp_scale
+
+scaler, pca, FP_MEAN, FP_SCALE = load_artifacts()
+
+# ---------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------
+API_URL = "https://agile-estimator-ofc.onrender.com/predict"
+
+BUSINESS_FEATURES = [
+    "performance_requirements",
+    "complex_processing",
+    "installation_ease",
+    "additional_complexity_factor",
+]
+
+FEATURE_LABELS = {
+    "function_points":             "Function Points",
+    "performance_requirements":    "Performance Requirements",
+    "complex_processing":          "Complex Processing",
+    "installation_ease":           "Installation Ease",
+    "additional_complexity_factor":"Additional Complexity Factor",
+}
+
+# ---------------------------------------------------------------
+# Helper functions
+# ---------------------------------------------------------------
+
+def preprocess_for_api(row: dict) -> dict:
+    """Scale + PCA the 4 business features; standardize function_points; return API payload."""
+    X = pd.DataFrame([row])[BUSINESS_FEATURES].astype(float)
+    X_scaled = scaler.transform(X)
+    pcs = pca.transform(X_scaled)[0]
+    # function_points was standardized in the training CSV — inference must match that transform
+    fp_std = (float(row["function_points"]) - FP_MEAN) / FP_SCALE
+    return {
+        "function_points": fp_std,
+        "PC1": float(pcs[0]),
+        "PC2": float(pcs[1]),
+    }
 
 
-st.set_page_config(page_title="Agile Estimator", layout="wide")
-
-st.title("🚀 Agile Estimator")
-st.write("Estimativa de produtividade baseada em dados históricos.")
-
-
-tutorial, input, csv, trello = st.tabs(["Tutorial","Input Manual", "Upload CSV", "Capturar do Trello (Em desenvolvimento)"])
-
-with tutorial:
-    st.title("📖 Tutorial do Agile Estimator")
-    st.write("""
-    Aqui você aprende como preencher cada campo de entrada e entender o que o modelo espera em cada etapa.
-    """)
-
-    st.subheader("💡 Inputs necessários")
-    st.markdown("""
-    Esses são os dados essenciais para que o modelo gere uma estimativa precisa da sua sprint:
-
-    - **ID da Sprint** : Um identificador único para diferenciar cada sprint (exemplo: `sprint_1023`).
-
-    - **Quantidade de Membros** : Número de pessoas envolvidas na sprint.
-
-    - **Complexidade Média dos Requisitos** : Grau médio de dificuldade técnica da sprint (0 a 100) — quanto maior o valor, maior a complexidade.
-
-    - **Tipo de Tecnologia** : Área principal de desenvolvimento: **Web**, **Mobile**, **API** ou **Dados**.
-
-    - **Story Points Planejados**: Soma de pontos planejados para a execução das tarefas da sprint.
-
-    - **Cartões Planejados**: Quantidade total de tarefas (tasks) planejadas para o período.
-
-    ---
-    """)
-
-    st.subheader("⚙️ Inputs adicionais (opcionais)")
-    st.markdown("""
-    Esses campos ajudam o modelo a entender melhor a qualidade e o esforço da sua sprint.
-
-    - **Percentual de Bugs esperados (0 a 1)**  
-    Indique a proporção aproximada de tarefas que geram bugs.  
-    Exemplo: `0.05` → cerca de **5%** das entregas precisam de correção.
-
-    - **Percentual de Retrabalho esperado(0 a 1)**  
-    Informe quanto trabalho costuma ser refeito ou ajustado após a entrega.  
-    Exemplo: `0.03` → cerca de **3%** das tarefas exigem retrabalho.
-    """)
-
-    st.info("📝 **Dica:** Se não tiver esses dados, deixe como **0**. O sistema ainda funcionará normalmente — esses valores apenas ajudam a tornar a previsão mais precisa.")
-    st.markdown("---")
+def call_predict_api(payload: dict) -> float:
+    """POST to Render API; return effort_hours (already exp-transformed)."""
+    resp = requests.post(API_URL, json=payload, timeout=30)
+    resp.raise_for_status()
+    return float(resp.json()["prediction"])
 
 
-    st.subheader("📊 Outputs do projeto")
-    st.markdown("""
-    Aqui você pode ver o resultado que o **Agile Estimator** gera com base nas informações que você inseriu:
-
-    #### **Produtividade Prevista:**  
-                
-    O modelo calcula **quanto o time pode produzir em uma sprint**, considerando uma jornada padrão de **8 horas úteis por dia**.  
-    A partir dos dados fornecidos, ele **estima em quantos dias a sprint deve ser concluída** e mostra **previsões e insights** que ajudam o gestor a entender se a equipe está **dentro da capacidade esperada** ou se há **risco de atraso ou sobrecarga**.  
-
-    Essas estimativas permitem **planejar melhor o trabalho**, **ajustar prazos** e **tomar decisões mais assertivas** durante o desenvolvimento do projeto.
-
-    #### **Visualizações Interativas**: 
-    
-    Gráficos que mostram a **evolução da produtividade**, **distribuições**, e **relações com bugs e retrabalho** — tudo de forma dinâmica para facilitar a análise.
-
-    #### **Download CSV**: 
-    
-    Exporte os resultados em formato `.csv` para análises adicionais ou integração com outras ferramentas.
-
-    ---
-    📊 **Insight:** use essas visualizações para identificar padrões e gargalos entre sprints — isso ajuda a ajustar estimativas futuras com mais precisão.
-    """)
-
-# --- ABA UPLOAD CSV ---
-with csv:
-    uploaded_file = st.file_uploader("📂 Carregue seu arquivo CSV", type="csv")
-
-    if uploaded_file is not None:
-        data = pd.read_csv(uploaded_file)
-        data["produtividade_estimada"] = round(data["story_points_previstos"] / data["qtd_membros"], 2)
-        st.session_state.data = data.copy()
-        st.session_state.last_source = "csv"
-        st.success("✅ CSV carregado e salvo com sucesso!")
-        # st.dataframe(st.session_state.data)
-    else:
-        st.info("📁 Nenhum CSV carregado.")
-
-
-# --- ABA GET TRELLO ---
-with trello:
-
-    uploaded_trello = st.text_input(
-        "📋 Carregue suas sprints do Trello",
-        placeholder="https://api.trello.com/1/boards/meu_board"
+def estimate_batch(df: pd.DataFrame) -> pd.DataFrame:
+    """Run inference for all rows; add effort_hours_previsto column."""
+    results = []
+    errors  = []
+    for _, row in df.iterrows():
+        try:
+            payload = preprocess_for_api(row.to_dict())
+            results.append(call_predict_api(payload))
+        except Exception as e:
+            results.append(None)
+            errors.append(str(e))
+    df = df.copy()
+    df["effort_hours_previsto"] = results
+    df["dias_estimados"]  = df["effort_hours_previsto"].apply(
+        lambda x: math.ceil(x / 8) if x else None
     )
-
-    # Regex para validar link do Trello
-    trello_regex = r"^https://api\.trello\.com/1/boards/[a-zA-Z0-9_-]+$"
-
-    if uploaded_trello:
-
-        if re.match(trello_regex, uploaded_trello):
-
-            st.markdown(f"✅ Link do Trello válido: {uploaded_trello}")
-            #  lógica para conectar ao board get_trello_cards_public()
-            uploaded_file = uploaded_trello
-                # Exemplo de DataFrame simulado (substitua pela função real depois)
-
-            st.session_state.data = pd.DataFrame([
-                {"sprint_id": "trello_auto", "tipo_dominio": "Web", "qtd_membros": 3,
-                "complexidade_media": 42.5, "produtividade_estimada": 70.0,
-                "story_points_previstos": 50.0, "cartoes_previstos": 8,
-                "percentual_bugs": 0.05, "percentual_retrabalho": 0.03}
-            ])
-            st.session_state.last_source = "trello"
-            st.success("✅ Dados do Trello carregados e armazenados!")
+    df["semanas_estimadas"] = df["dias_estimados"].apply(
+        lambda x: math.ceil(x / 5) if x else None
+    )
+    return df, errors
 
 
-        else:
-            st.error("❌ Link inválido! Certifique-se de que segue o formato: https://api.trello.com/1/boards/<board_id>")
+def validate_columns(df: pd.DataFrame) -> list[str]:
+    return [c for c in REQUIRED_COLUMNS if c not in df.columns]
 
-# --- ABA INPUT MANUAL ---
-with input:
-    st.subheader("📝 Inserir dados da Sprint manualmente")
-    st.markdown("Preencha as informações abaixo ou clique em **Usar dados de exemplo** para testar.")
+# ---------------------------------------------------------------
+# Page header
+# ---------------------------------------------------------------
+st.title("🚀 Agile Estimator v2")
+st.write("Estimativa de **esforço total de desenvolvimento** de projetos de software, baseada em IA.")
 
-    # Inicializa input_user no session_state (default)
+# ---------------------------------------------------------------
+# Input tabs
+# ---------------------------------------------------------------
+tab_tutorial, tab_input, tab_csv, tab_trello = st.tabs([
+    "📖 Tutorial", "✏️ Input Manual", "📂 Upload CSV", "🔗 Capturar do Trello"
+])
+
+# ===========================
+# TUTORIAL
+# ===========================
+with tab_tutorial:
+    st.title("📖 Como usar o Agile Estimator v2")
+    st.markdown("""
+    O **Agile Estimator v2** usa um modelo de Machine Learning treinado em dados reais de
+    projetos de software para estimar o **esforço total em horas-pessoa** necessário para
+    desenvolver um projeto do início ao fim.
+
+    ---
+    """)
+
+    st.subheader("🧠 Sobre o modelo")
+    st.markdown("""
+    O modelo foi treinado no dataset **Maxwell** (62 projetos reais de telecomunicações),
+    usando **Regressão Lasso** com validação cruzada repetida (RepeatedKFold).
+
+    - **Variável-alvo:** `effort_hours` — esforço total do projeto em horas-pessoa
+    - **Algoritmo:** Lasso (melhor RMSE entre Ridge, Lasso, SVR, RandomForest, GradientBoosting)
+    - **MAPE médio:** ~49 % — útil como estimativa de baseline e comparação entre projetos
+    - **Redução de dimensionalidade:** PCA aplicado sobre 4 fatores de complexidade (explicando ~70 % da variância)
+
+    ---
+    """)
+
+    st.subheader("📥 Inputs necessários")
+    st.markdown("""
+    Você deve fornecer **5 valores** por projeto:
+
+    | Campo | Tipo | Descrição |
+    |-------|------|-----------|
+    | **Function Points** | Número livre | Tamanho funcional do software em Adjusted Function Points (AFP). Quanto maior, mais esforço esperado. |
+    | **Performance Requirements** | **Escala 1–5** | Quão exigente é o sistema em termos de desempenho e velocidade. |
+    | **Complex Processing** | **Escala 1–5** | Grau de complexidade do processamento técnico (algoritmos, cálculos, lógica de negócio). |
+    | **Installation Ease** | **Escala 1–5** | Facilidade de instalação e deploy. **Atenção: 5 = muito fácil, 1 = muito difícil**. |
+    | **Additional Complexity Factor** | **Escala 1–5** | Fatores adicionais de complexidade fora do escopo padrão. |
+
+    **Escala Likert (campos 2–5):**
+
+    | Valor | Significado |
+    |-------|-------------|
+    | 1 | Muito Baixo |
+    | 2 | Baixo |
+    | 3 | Médio |
+    | 4 | Alto |
+    | 5 | Muito Alto |
+
+    > 💡 **Dica:** Os 4 fatores de escala são transformados internamente por PCA (redução de dimensionalidade), que captura os padrões de complexidade do dataset Maxwell sem precisar de ajuste manual.
+
+    ---
+    """)
+
+    st.subheader("📊 Outputs")
+    st.markdown("""
+    Para cada projeto, o sistema retorna:
+
+    | Coluna | Descrição |
+    |--------|-----------|
+    | **Esforço Previsto (h)** | Total de horas-pessoa estimado para desenvolver o projeto |
+    | **Dias Estimados** | Conversão: horas ÷ 8 (jornada diária), arredondado para cima |
+    | **Semanas Estimadas** | Conversão: dias ÷ 5 (semana útil), arredondado para cima |
+
+    ---
+    """)
+
+    st.subheader("⚠️ Limitações")
+    st.info("""
+    - O dataset de treino tem **62 projetos** — estimativas têm incerteza considerável (~49% MAPE).
+    - O modelo é mais confiável para **comparar projetos entre si** do que para prever esforço absoluto.
+    - Projetos muito fora do perfil de telecomunicações do dataset Maxwell podem ter estimativas menos precisas.
+    """)
+
+    st.subheader("🔄 Fluxo de uso")
+    st.markdown("""
+    1. Insira os dados do projeto (manual, CSV ou Trello).
+    2. Clique em **Calcular Esforço Total Estimado**.
+    3. Visualize os resultados e baixe o CSV.
+    4. Use a aba **Visualizações** para comparar projetos.
+    """)
+
+# ===========================
+# INPUT MANUAL
+# ===========================
+with tab_input:
+    st.subheader("✏️ Inserir dados do projeto manualmente")
+
     if "input_user" not in st.session_state:
         st.session_state.input_user = {
-            "sprint_id": f"sprint_{np.random.randint(1000,9999)}",
-            "qtd_membros": 1,
-            "complexidade_media": 2.3,
-            "tipo_dominio": "Web",
-            #"produtividade_estimada": 119.0,
-            "story_points_previstos": 55.0,
-
-            "cartoes_previstos": 10.0,
-            "percentual_bugs": 0.05,
-            "percentual_retrabalho": 0.03
+            "project_id": "projeto_001",
+            "function_points": 300.0,
+            "performance_requirements": 3.0,
+            "complex_processing": 4.0,
+            "installation_ease": 3.0,
+            "additional_complexity_factor": 3.0,
         }
 
     col1, col2 = st.columns(2)
 
     with col1:
+        project_id = st.text_input(
+            "🆔 ID do Projeto",
+            value=st.session_state.input_user["project_id"],
+            help="Identificador único do projeto (ex: projeto_alpha)"
+        )
+        if not project_id.strip():
+            project_id = f"projeto_{np.random.randint(100, 999)}"
 
-        sprint_id = st.text_input("🆔 ID da Sprint", value=st.session_state.input_user["sprint_id"])
+        function_points = st.number_input(
+            "📐 Function Points",
+            min_value=0.0,
+            value=float(st.session_state.input_user["function_points"]),
+            step=10.0,
+            help="Tamanho funcional do software em Adjusted Function Points"
+        )
 
-        if not sprint_id.strip():
-            sprint_id = f"sprint_{np.random.randint(1000,9999)}"
-
-        qtd_membros = st.number_input("👥 Quantidade de Membros",
-                                       min_value=1, step=1, 
-                                       value=st.session_state.input_user["qtd_membros"])
-
-        complexidade_media = st.number_input("⚙️ Complexidade Média (0-100)",
-                                              min_value=0.0, max_value=100.0, 
-                                              value=st.session_state.input_user["complexidade_media"], 
-                                              step=1.0)
-
-        cartoes_previstos = st.number_input("🗂️ Cartões previstos (número de cartões/tarefas)", 
-                                            min_value=0.0, 
-                                            step=1.0, 
-                                            value=st.session_state.input_user["cartoes_previstos"])
+        performance_requirements = st.number_input(
+            "⚡ Performance Requirements (1–5)",
+            min_value=1.0,
+            max_value=5.0,
+            value=float(st.session_state.input_user["performance_requirements"]),
+            step=0.5,
+            help="Escala Likert 1–5: exigência de desempenho/velocidade do sistema. 1=Muito Baixa, 5=Muito Alta."
+        )
 
     with col2:
+        complex_processing = st.number_input(
+            "⚙️ Complex Processing (1–5)",
+            min_value=1.0,
+            max_value=5.0,
+            value=float(st.session_state.input_user["complex_processing"]),
+            step=0.5,
+            help="Escala Likert 1–5: grau de complexidade do processamento técnico. 1=Muito Baixo, 5=Muito Alto."
+        )
 
-        tipo_dominio = st.selectbox("🌐 Tipo de Tecnologia", 
-                                    options=["Web", "Mobile", "API", "Dados"], 
-                                    index=["Web","Mobile","API","Dados"]
-                                    .index(st.session_state.input_user["tipo_dominio"]))
+        installation_ease = st.number_input(
+            "🚀 Installation Ease (1–5)",
+            min_value=1.0,
+            max_value=5.0,
+            value=float(st.session_state.input_user["installation_ease"]),
+            step=0.5,
+            help="Escala Likert 1–5: facilidade de instalação/deploy. 1=Muito Difícil, 5=Muito Fácil. Atenção: maior valor = MENOS esforço neste campo."
+        )
 
-        # produtividade_estimada = st.number_input("📈 Produtividade Estimada (%)", min_value=0.0, max_value=1000.0, value=st.session_state.input_user["produtividade_estimada"], step=1.0)
+        additional_complexity_factor = st.number_input(
+            "🔧 Additional Complexity Factor (1–5)",
+            min_value=1.0,
+            max_value=5.0,
+            value=float(st.session_state.input_user["additional_complexity_factor"]),
+            step=0.5,
+            help="Escala Likert 1–5: fatores adicionais de complexidade fora do escopo padrão. 1=Muito Baixo, 5=Muito Alto."
+        )
 
-        story_point = st.number_input("📊 Story points previstos para a sprint",
-                                       min_value=0.0, max_value=1000.0, 
-                                       value=st.session_state.input_user["story_points_previstos"], 
-                                       step=1.0)
-
-        percentual_bugs = st.number_input("🐞 Percentual de bugs (0-1)", 
-                                          min_value=0.0, max_value=1.0, 
-                                          value=st.session_state.input_user["percentual_bugs"], 
-                                          step=1.0)
-
-        percentual_retrabalho = st.number_input("🔁 Percentual de retrabalho (0-1)", 
-                                                min_value=0.0, max_value=1.0, 
-                                                value=st.session_state.input_user["percentual_retrabalho"], 
-                                                step=1.0)
-        
-    produtividade_estimada = round(story_point / qtd_membros, 2)
-
-    # Atualiza o input_user no session_state
     st.session_state.input_user = {
-        "sprint_id": sprint_id,
-        "qtd_membros": qtd_membros,
-        "complexidade_media": complexidade_media,
-        "tipo_dominio": tipo_dominio,
-        "produtividade_estimada": produtividade_estimada,
-        "story_points_previstos": story_point,
-        "cartoes_previstos": cartoes_previstos,
-        "percentual_bugs": percentual_bugs,
-        "percentual_retrabalho": percentual_retrabalho
+        "project_id": project_id,
+        "function_points": function_points,
+        "performance_requirements": performance_requirements,
+        "complex_processing": complex_processing,
+        "installation_ease": installation_ease,
+        "additional_complexity_factor": additional_complexity_factor,
     }
 
-    c1, c2 = st.columns([1,1])
+    _, col_btn1, col_btn2, _ = st.columns([1, 1, 1, 1])
 
+    with col_btn1:
+        if st.button("✅ Adicionar Projeto", use_container_width=True):
+            new_row = pd.DataFrame([st.session_state.input_user])
+            for col in REQUIRED_COLUMNS + ["function_points"]:
+                if col in new_row.columns:
+                    new_row[col] = pd.to_numeric(new_row[col], errors="coerce")
 
+            existing = st.session_state.get("data")
+            if existing is not None:
+                st.session_state.data = pd.concat([existing, new_row], ignore_index=True)
+            else:
+                st.session_state.data = new_row.copy()
 
-with c2:
-   
-    empty, b1, b2 = st.columns([0.4, 1, 1])
+            st.session_state.last_source = "manual"
+            st.toast("Projeto adicionado com sucesso!", icon="✅")
+            st.rerun()
 
-    with b1:
-        usar = st.button("✅ Adicionar Sprint", use_container_width=True)
-    with b2:
-        resetar = st.button("🔄 Resetar formulário", use_container_width=True)
+    with col_btn2:
+        if st.button("🔄 Resetar formulário", use_container_width=True):
+            st.session_state.input_user = {
+                "project_id": "projeto_001",
+                "function_points": 300.0,
+                "performance_requirements": 3.0,
+                "complex_processing": 4.0,
+                "installation_ease": 3.0,
+                "additional_complexity_factor": 3.0,
+            }
+            st.session_state.data = None
+            st.toast("Formulário e dados resetados.", icon="🧹")
+            st.rerun()
 
-    if usar:
-        df = pd.DataFrame([st.session_state.input_user])
-        numeric_cols = [
-            "qtd_membros",
-            "complexidade_media",
-            "produtividade_estimada",
-            "story_points_previstos",
-            "cartoes_previstos",
-            "percentual_bugs",
-            "percentual_retrabalho"
-        ]
+    st.markdown("---")
+    with st.expander("🧮 Calculadora IFPUG de Function Points", expanded=False):
+        st.markdown("""
+        Use esta calculadora para obter os **Adjusted Function Points (AFP)** do seu projeto
+        com base no método **IFPUG** — o mesmo padrão usado no dataset Maxwell.
 
-        for col in numeric_cols:
-            df[col] = pd.to_numeric(df[col], errors="coerce").astype(float)
-        
-        df = pd.concat([st.session_state.data, df], ignore_index=True) if st.session_state.get("data") is not None else df # Adicona novas sprints ao DataFrame existente ou cria novo
+        Conte quantas funções de cada tipo existem no projeto, separadas por complexidade (**Simples / Média / Complexa**):
+        """)
 
-        st.session_state.data = df.copy()
-        st.success("✅ Dados adicionados com sucesso!")
-        st.session_state.last_source = "form"
-
-    if resetar:
-        st.session_state.input_user = {
-            "sprint_id": f"sprint_{np.random.randint(1000,9999)}",
-            "qtd_membros": 1,
-            "complexidade_media": 0.0,
-            "tipo_dominio": "Web",
-            "produtividade_estimada": 0.0,
-            "story_points_previstos": 0.0,
-            "cartoes_previstos": 0.0,
-            "percentual_bugs": 0.0,
-            "percentual_retrabalho": 0.0
+        # IFPUG weights table
+        IFPUG_WEIGHTS = {
+            "EI — External Input":          (3, 4, 6),
+            "EO — External Output":         (4, 5, 7),
+            "EQ — External Query":          (3, 4, 6),
+            "ILF — Internal Logical File":  (7, 10, 15),
+            "EIF — External Interface File":(5, 7, 10),
         }
-        st.session_state.data = None
-        st.info("🧹 Formulário resetado!")
 
+        fp_col_labels, fp_col_s, fp_col_m, fp_col_c = st.columns([3, 1, 1, 1])
+        fp_col_labels.markdown("**Tipo**")
+        fp_col_s.markdown("**Simples**")
+        fp_col_m.markdown("**Média**")
+        fp_col_c.markdown("**Complexa**")
+
+        fp_counts: dict[str, tuple] = {}
+        for func_type, (ws, wm, wc) in IFPUG_WEIGHTS.items():
+            c0, c1, c2, c3 = st.columns([3, 1, 1, 1])
+            c0.markdown(f"{func_type}  \n*(pesos: {ws} / {wm} / {wc})*")
+            n_s = c1.number_input(f"S_{func_type}", min_value=0, value=0, step=1, label_visibility="collapsed", key=f"fp_s_{func_type}")
+            n_m = c2.number_input(f"M_{func_type}", min_value=0, value=0, step=1, label_visibility="collapsed", key=f"fp_m_{func_type}")
+            n_c = c3.number_input(f"C_{func_type}", min_value=0, value=0, step=1, label_visibility="collapsed", key=f"fp_c_{func_type}")
+            fp_counts[func_type] = (n_s, n_m, n_c)
+
+        ufp = sum(
+            n_s * ws + n_m * wm + n_c * wc
+            for (func_type, (ws, wm, wc)), (n_s, n_m, n_c) in zip(IFPUG_WEIGHTS.items(), fp_counts.values())
+        )
+
+        st.markdown("---")
+        st.markdown(f"**UFP (Unadjusted Function Points): `{ufp}`**")
+
+        use_vaf = st.checkbox("Aplicar ajuste VAF (Value Adjustment Factor)?", value=False,
+                              help="O VAF ajusta o UFP com base em 14 características técnicas gerais, cada uma de 0 a 5.")
+        if use_vaf:
+            tdi = st.slider(
+                "TDI — Total Degree of Influence (soma das 14 características, 0–70)",
+                min_value=0, max_value=70, value=35,
+                help="Soma dos 14 Fatores de Influência Técnica Geral do IFPUG (cada um de 0 a 5)."
+            )
+            vaf = 0.65 + 0.01 * tdi
+            afp = round(ufp * vaf, 1)
+            st.markdown(f"VAF = 0.65 + 0.01 × {tdi} = **{vaf:.2f}**")
+            st.success(f"AFP (Adjusted Function Points) = UFP × VAF = **{ufp} × {vaf:.2f} = {afp}**")
+            fp_result = afp
+        else:
+            fp_result = float(ufp)
+            if ufp > 0:
+                st.info(f"AFP = UFP = **{ufp}** (sem ajuste VAF)")
+
+        if ufp > 0:
+            if st.button("📋 Usar este valor como Function Points", key="use_fp_calc"):
+                st.session_state.input_user["function_points"] = fp_result
+                st.success(f"✅ Function Points definido para **{fp_result}**. Ajuste os demais campos e clique em *Adicionar Projeto*.")
+                st.rerun()
+
+# ===========================
+# UPLOAD CSV
+# ===========================
+with tab_csv:
+    st.subheader("📂 Carregar projetos via CSV")
+    st.markdown("""
+    O CSV deve conter as colunas abaixo (coluna `project_id` é opcional):
+
+    ```
+    project_id, function_points, performance_requirements, complex_processing, installation_ease, additional_complexity_factor
+    ```
+    """)
+
+    uploaded_file = st.file_uploader("Selecione o arquivo CSV", type="csv")
+
+    if uploaded_file is not None:
+        df_csv = pd.read_csv(uploaded_file)
+        missing = validate_columns(df_csv)
+
+        if missing:
+            st.error(f"❌ Colunas obrigatórias ausentes: {', '.join(missing)}")
+        else:
+            if "project_id" not in df_csv.columns:
+                df_csv.insert(0, "project_id", [f"projeto_{i+1}" for i in range(len(df_csv))])
+
+            st.dataframe(df_csv.head(10), use_container_width=True)
+            st.caption(f"{len(df_csv)} projeto(s) encontrado(s) no arquivo.")
+
+            if st.button("📥 Carregar este CSV", use_container_width=False):
+                st.session_state.data = df_csv.copy()
+                st.session_state.last_source = "csv"
+                st.toast(f"{len(df_csv)} projeto(s) carregado(s)!", icon="✅")
+                st.rerun()
+    else:
+        st.info("📁 Nenhum CSV carregado ainda.")
+
+# ===========================
+# TRELLO
+# ===========================
+with tab_trello:
+    st.subheader("🔗 Importar projetos do Trello")
+    st.markdown("""
+    Cole o link de um board **público** do Trello. Os cartões devem conter campos customizados com os nomes:
+    `Function Points`, `Performance Requirements`, `Complex Processing`, `Installation Ease`, `Additional Complexity Factor`.
+    """)
+
+    trello_url = st.text_input(
+        "URL do board",
+        placeholder="https://trello.com/b/DKf6KNh2/testeagileestimator"
+    )
+
+    trello_regex = r"^https://trello\.com/b/[a-zA-Z0-9]+(/[a-zA-Z0-9_-]+)?$"
+
+    if trello_url:
+        if not re.match(trello_regex, trello_url):
+            st.error("❌ Link inválido. Use o formato: `https://trello.com/b/<board_id>`")
+        else:
+            if st.button("🔍 Buscar projetos do Trello", use_container_width=False):
+                with st.spinner("Buscando dados do Trello..."):
+                    try:
+                        df_trello = get_trello_cards_public(trello_url)
+                        missing = validate_columns(df_trello)
+
+                        if missing:
+                            st.warning(
+                                f"⚠️ Campos não encontrados nos cartões: {', '.join(missing)}. "
+                                "Verifique os nomes dos custom fields no board."
+                            )
+                        elif df_trello.dropna(subset=REQUIRED_COLUMNS).empty:
+                            st.warning("⚠️ Nenhum cartão com todos os campos preenchidos foi encontrado.")
+                        else:
+                            df_trello = df_trello.dropna(subset=REQUIRED_COLUMNS).reset_index(drop=True)
+                            st.session_state.trello_preview = df_trello.copy()
+                    except Exception as e:
+                        st.error(f"❌ Erro ao buscar dados do Trello: {e}")
+                        st.session_state.pop("trello_preview", None)
+
+            if "trello_preview" in st.session_state:
+                df_preview = st.session_state.trello_preview
+                st.dataframe(df_preview.head(10), use_container_width=True)
+                st.caption(f"{len(df_preview)} projeto(s) encontrado(s) no board.")
+                if st.button("📥 Carregar estes projetos", use_container_width=False):
+                    st.session_state.data = df_preview.copy()
+                    st.session_state.last_source = "trello"
+                    st.session_state.pop("trello_preview", None)
+                    st.toast(f"{len(df_preview)} projeto(s) importado(s) do Trello!", icon="✅")
+                    st.rerun()
+
+# ---------------------------------------------------------------
+# Data status bar
+# ---------------------------------------------------------------
 st.markdown("---")
-        
-
-# --- depois do upload do arquivo ---
 
 if st.session_state.get("data") is not None:
+    col_status, col_clear = st.columns([4, 1])
+    with col_status:
+        source = st.session_state.get("last_source", "?").upper()
+        n = len(st.session_state.data)
+        st.info(f"📂 **{n} projeto(s)** carregado(s) — origem: **{source}**")
+    with col_clear:
+        if st.button("🗑️ Limpar dados", use_container_width=True):
+            st.session_state.data = None
+            st.session_state.last_source = None
+            st.rerun()
 
-    if st.button("🧹 Limpar dados") and st.session_state.data is not None:
-        st.session_state.data = None
-        st.session_state.last_source = None
-        st.success("Dados limpos com sucesso!")
-
-    if "last_source" in st.session_state and st.session_state.last_source is not None:
-        st.info(f"📂 Origem atual dos dados: **{st.session_state.last_source.upper()}**")
-    else:
-        st.info(f"📂 Sem dados carregados no momento") 
-
-
+# ---------------------------------------------------------------
+# Results section
+# ---------------------------------------------------------------
 if "data" in st.session_state and st.session_state.data is not None and not st.session_state.data.empty:
 
+    res_tab1, res_tab2, res_tab3 = st.tabs(["📋 Dados", "📈 Estimativas", "📊 Visualizações"])
 
-    # Tabs
-    tab1, tab2, tab3 = st.tabs(["📋 Dados", "📈 Estimativas", "📊 Visualizações"])
+    # -------------------------
+    # TAB 1 — DADOS
+    # -------------------------
+    with res_tab1:
+        st.subheader("📋 Projetos carregados")
+        display_cols = [c for c in ["project_id"] + REQUIRED_COLUMNS
+                        if c in st.session_state.data.columns]
+        st.dataframe(
+            st.session_state.data[display_cols].head(100),
+            use_container_width=True
+        )
+        st.caption(f"Total de projetos: **{len(st.session_state.data)}**")
 
-    # -----------------------------------------------------
-    # TAB 1 — VISUALIZAÇÃO DE DADOS
-    # -----------------------------------------------------
-    with tab1:
-        st.subheader("📋 Pré-visualização dos dados")
+    # -------------------------
+    # TAB 2 — ESTIMATIVAS
+    # -------------------------
+    with res_tab2:
+        st.subheader("⚡ Calcular Esforço Total Estimado")
 
-        # Define as colunas esperadas dinamicamente
-        columns = [
-            col for col in [
-                "sprint_id",
-                "tipo_dominio",
-                "qtd_membros",
-                "story_points_previstos",
-                "complexidade_media",
-                "percentual_bugs",
-                "cartoes_previstos",
-                "percentual_retrabalho",  
-            ] if col in st.session_state.data.columns
-        ]
-
-        #columns = st.session_state.data.columns
-
-        if len(columns) > 0:
-            st.dataframe(st.session_state.data[columns].head(50))
-            st.caption(f"Total de registros: **{len(st.session_state.data)}**")
-        else:
-            st.warning("⚠️ Nenhuma coluna reconhecida foi encontrada nos dados.")
-
-    # -----------------------------------------------------
-    # TAB 2 — ESTIMATIVA
-    # -----------------------------------------------------
-    with tab2:
-        st.subheader("⚡ Fazer Estimativa")
-
-        if st.button("🚀 Calcular Produtividade Prevista", key="calc_estimativa"):
-            try:
-                df_input = st.session_state.data.copy()
-
-                # Verifica colunas mínimas do pipeline
-                required_pipeline_cols = [
-                    "qtd_membros", "complexidade_media", "tipo_dominio",
-                    "produtividade_estimada", "story_points_previstos",
-                    "cartoes_previstos", "percentual_bugs", "percentual_retrabalho"
-                ]
-
-                missing = [c for c in required_pipeline_cols if c not in df_input.columns]
-
-                if missing:
-                    st.error(f"❌ Colunas faltando para o pipeline: {', '.join(missing)}")
-
-                else:
-                    # Tudo ok: preprocessa e prevê
-                    processed_data = preprocess_input(df_input.copy(), scaler, label_encoder)
-
-                    predictions = model.predict(processed_data)
-                    st.session_state.data["produtividade_prevista"] = predictions
-
-                    st.success("✅ Estimativas calculadas com sucesso!")
-
-                    # Mostra pré-visualização das primeiras 5 sprints com produtividade prevista
-                    st.session_state.data["semanas_estimadas"]  = st.session_state.data["produtividade_prevista"] / 7.0
-                    st.session_state.data["semanas_estimadas"] = st.session_state.data["semanas_estimadas"].apply(math.ceil)
-
-                    preview = st.session_state.data[["sprint_id", "produtividade_prevista", "semanas_estimadas"]].head(5).copy()
-
-                    st.markdown("### 📈 Produtividade Prevista das Primeiras Sprints")
-
-                    # Cria uma coluna visual de barras (mini indicador)
-                    preview["Escala de produtividade"] = (
-                        preview["produtividade_prevista"]
-                        .apply(lambda x: "█" * int(x / preview["produtividade_prevista"].max() * 20))
-                    )
-
-                    # Exibe a tabela estilizada
-                    st.dataframe(
-                        preview.style.format(
-                            {"produtividade_prevista": "{:.2f}"}
-                        ).set_table_styles(
-                            [
-                                {"selector": "th", "props": [("text-align", "center"), ("background-color", "#0E1117"), ("color", "white")]},
-                                {"selector": "td", "props": [("text-align", "center")]},
-                            ]
-                        ),
-                        use_container_width=True
-                    )
-
-                    st.markdown("""
-                        #### ℹ️ Informações adicionais  
-
-                        Aqui está o que cada coluna representa, de forma simples:
-
-                        - **Produtividade Prevista:** mostra a **estimativa de produtividade** calculada pelo *Agile Estimator*, considerando uma jornada de **8 horas úteis por dia**.  
-                        - **Semanas Estimadas:** indica o **tempo total previsto para concluir a sprint**, em **semanas**, sempre **arredondado para cima** para garantir uma margem de segurança.  
-                        - **Escala de Produtividade:** oferece uma **visão comparativa rápida** entre as sprints, mostrando o **tempo relativo de duração** de cada uma.  
-
-                        Essas informações ajudam a **interpretar os resultados** de forma prática e entender **como o modelo projeta o ritmo de trabalho do time**.
-                        """)
-
-
-                    csv = st.session_state.data[["sprint_id", "produtividade_prevista", "semanas_estimadas"]].to_csv(index=False).encode("utf-8")
-
-                    st.download_button("📥 Baixar resultados", data=csv, file_name="estimativas_produtividade_dias.csv", mime="text/csv")
-
-            except Exception as e:
-                st.exception(e)  # mostra stacktrace legível no Streamlit
-
-        with tab3:
-            if "produtividade_prevista" in st.session_state.data.columns:
-                data = st.session_state.data.copy()
-                st.subheader("🔎 Filtros")
-
-
-                # ------------------ Filtros persistentes ------------------
-                if "range_filter" not in st.session_state:
-                    st.session_state.range_filter = (
-                        float(data["produtividade_prevista"].min()),
-                        float(data["produtividade_prevista"].max()),
-                    )
-
-                if "dominio_filter" not in st.session_state:
-                    st.session_state.dominio_filter = list(data["tipo_dominio"].unique())
-
-                min_val = float(data["produtividade_prevista"].min())
-                max_val = float(data["produtividade_prevista"].max())
-
-                # Corrige caso todos os valores sejam iguais
-                if min_val == max_val:
-                    max_val += 0.001  # margem mínima para o slider não quebrar
-
-                range_filter = st.slider(
-                    "Intervalo da Produtividade Prevista",
-                    min_value=min_val,
-                    max_value=max_val,
-                    value=st.session_state.range_filter,
-                    key="range_filter",
-                )
-
-
-                dominio_filter = st.multiselect(
-                    "Selecione a(s) Tecnologia(s)",
-                    list(data["tipo_dominio"].unique()),
-                    default=st.session_state.dominio_filter,
-                    key="dominio_filter",
-                )
-
-                # Lista de sprints disponíveis
-                all_sprints = list(data["sprint_id"].unique())
-
-                # Checkbox para selecionar todas
-                select_all = st.checkbox("Selecionar todas as sprints", value=True)
-
-                if select_all:
-                    sprint_filter = all_sprints
-                else:
-                    sprint_filter = st.multiselect(
-                        "Selecione a(s) sprint(s)",
-                        all_sprints,
-                        default=st.session_state.sprint_filter if "sprint_filter" in st.session_state else all_sprints,
-                        key="sprint_filter",
-                    )
-
-                filtered_data = data[
-                    (data["produtividade_prevista"] >= range_filter[0])
-                    & (data["produtividade_prevista"] <= range_filter[1])
-                    & (data["tipo_dominio"].isin(dominio_filter))
-                    & (data["sprint_id"].isin(sprint_filter))
-                ]
-
-                st.write(f"Mostrando **{len(filtered_data)} registros** após filtros.")
-
-                chart_data = filtered_data.copy()
-                if len(chart_data) > 500:
-                    chart_data = chart_data.sample(500, random_state=42)
-
-                chart_data["sprint_num"] = chart_data["sprint_id"].str.extract("(\d+)").astype(int)
-                chart_data = chart_data.sort_values("sprint_num").reset_index(drop=True)
-
-
-                st.subheader("📊 Histograma de Produtividade Prevista")
-                st.caption("Mostra quantas vezes cada nível de produtividade aparece, separado por Tecnologia. Útil para enxergar a distribuição geral.")
-
-                hist_chart = alt.Chart(chart_data).mark_bar().encode(
-                    x=alt.X("produtividade_prevista:Q", bin=alt.Bin(maxbins=20), title="Produtividade Prevista"),
-                    y=alt.Y("count()", title="Frequência"),
-                    color= alt.Color("tipo_dominio:N", title="Tecnologia"),
-                    tooltip=["count()", "tipo_dominio"]
-                ).properties(width=600, height=400)
-
-                st.altair_chart(hist_chart, use_container_width=True)
-
-                # Boxplot
-
-                st.subheader("📦 Boxplot por Tecnologia")
-                st.caption("Mostra como a produtividade prevista varia em cada Tecnologia, incluindo valores médios e pontos fora do padrão.")
-
-                box_plot = alt.Chart(chart_data).mark_boxplot().encode(
-                    x="tipo_dominio:N", 
-                    y=alt.Y("produtividade_prevista:Q", title="Produtividade Prevista"),
-                    color= alt.Color("tipo_dominio:N", title="Tecnologia"),
-                    tooltip=["tipo_dominio", "produtividade_prevista"]
-                ).properties(width=600, height=400)
-                st.altair_chart(box_plot, use_container_width=True)
-
-                # Barras (média)   
-
-                st.subheader("📊 Produtividade Média por Tamanho da Equipe")
-                st.caption("Compara a produtividade média de acordo com o número de membros do time. Ajuda a entender como o tamanho da equipe influencia.")
-
-                bar_chart = alt.Chart(chart_data).mark_bar().encode(
-                    x="qtd_membros:N",
-                    y=alt.Y("mean(produtividade_prevista):Q", title="Produtividade Média Prevista"),
-                    color= alt.Color("tipo_dominio:N", title="Tecnologia"),
-                    tooltip=[
-                        "qtd_membros",
-                        alt.Tooltip("mean(produtividade_prevista):Q", title="Produtividade Média"),
-                        "tipo_dominio",
-                    ],
-                ).properties(width=600, height=400)
-                st.altair_chart(bar_chart, use_container_width=True)
-
-                st.subheader("🥧 Participação dos Tecnologias")
-                st.caption("Mostra a proporção de produtividade média de cada Tecnologia em relação ao total. Facilita a comparação entre áreas.")
-
-                pie_data = (
-                    chart_data.groupby("tipo_dominio")["produtividade_prevista"]
-                    .mean()
-                    .reset_index()
-                )
-
-                pie_chart = alt.Chart(pie_data).mark_arc().encode(
-                    theta="produtividade_prevista",
-                    color= alt.Color("tipo_dominio:N", title="Tecnologia"),
-                    tooltip=["tipo_dominio", "produtividade_prevista"],
-                )
-                st.altair_chart(pie_chart, use_container_width=True)
-
-                # Linha
-
-                st.subheader("📈 Evolução da Produtividade por Sprint")
-                st.caption("Acompanha como a produtividade prevista muda ao longo das sprints. Ajuda a identificar tendências de crescimento ou queda.")
-
-                line_chart = alt.Chart(chart_data).mark_line(point=True).encode(
-                    x=alt.X("sprint_id:N", sort=list(chart_data["sprint_id"]), title="Sprint"),
-                    y=alt.Y("produtividade_prevista:Q", title="Produtividade Prevista"),
-                    color= alt.Color("tipo_dominio:N", title="Tecnologia"),
-                    tooltip=["sprint_id", "produtividade_prevista", "tipo_dominio"]
-                ).properties(width=600, height=400)
-                st.altair_chart(line_chart, use_container_width=True)
-
-
-                st.subheader("⚖️ Relação entre Produtividade, Bugs e Retrabalho")
-                st.caption("Mostra se existe ligação entre produtividade, quantidade de bugs e retrabalho. Posição mais à direita indica maior produtividade; mais acima indica mais bugs.")
-
-                scatter_chart = alt.Chart(chart_data).mark_circle(size=60).encode(
-                    x=alt.X("produtividade_prevista:Q", title="Produtividade Prevista"),
-                    y=alt.Y("percentual_bugs:Q", title="Percentual de Bugs (%)"),
-                    color= alt.Color("tipo_dominio:N", title="Tecnologia"),
-                    tooltip=[
-                        alt.Tooltip("percentual_bugs:Q", title="Percentual de Bugs (%)"),
-                        alt.Tooltip("percentual_retrabalho:Q", title="Percentual de Retrabalho (%)"),
-                        alt.Tooltip("produtividade_prevista:Q", title="Produtividade Prevista"),
-                        "tipo_dominio",
-                    ]
-                ).properties(width=600, height=400)
-                st.altair_chart(scatter_chart, use_container_width=True)
+        if st.button("🚀 Calcular Esforço Total Estimado", key="calc_esforco"):
+            missing = validate_columns(st.session_state.data)
+            if missing:
+                st.error(f"❌ Colunas faltando: {', '.join(missing)}")
             else:
-                st.warning("⚠️ Por favor, calcule as estimativas primeiro na aba 'Estimativas'.")
+                with st.spinner("Calculando estimativas via API..."):
+                    try:
+                        result_df, errors = estimate_batch(st.session_state.data)
+                        st.session_state.data = result_df
 
+                        if errors:
+                            st.warning(f"⚠️ {len(errors)} erro(s) durante a inferência: {errors[0]}")
 
+                        valid = result_df["effort_hours_previsto"].notna().sum()
+                        st.success(f"✅ Estimativas calculadas para {valid} projeto(s)!")
+                    except Exception as e:
+                        st.exception(e)
 
+        if "effort_hours_previsto" in st.session_state.data.columns:
+            data = st.session_state.data
 
- 
+            preview_cols = ["project_id", "effort_hours_previsto", "dias_estimados", "semanas_estimadas"]
+            preview = data[[c for c in preview_cols if c in data.columns]].copy()
 
-# -------------------------------
-# FAQ lateral
-# -------------------------------
+            max_h = preview["effort_hours_previsto"].max()
+            if max_h and max_h > 0:
+                preview["Escala"] = preview["effort_hours_previsto"].apply(
+                    lambda x: "█" * int((x / max_h) * 20) if pd.notna(x) else ""
+                )
+
+            st.markdown("### 📈 Resultados")
+            st.dataframe(
+                preview.style.format({"effort_hours_previsto": "{:.0f} h"}),
+                use_container_width=True
+            )
+
+            st.markdown("""
+            #### ℹ️ O que cada coluna significa
+
+            | Coluna | Descrição |
+            |--------|-----------|
+            | **Esforço Previsto (h)** | Total de horas-pessoa estimado para desenvolver o projeto completo |
+            | **Dias Estimados** | Horas ÷ 8 horas/dia útil, arredondado para cima |
+            | **Semanas Estimadas** | Dias ÷ 5 dias úteis/semana, arredondado para cima |
+            | **Escala** | Comparação visual relativa entre projetos |
+
+            > ⚠️ O esforço estimado representa o **projeto inteiro**, não uma sprint individual.
+            """)
+
+            csv_bytes = data[[c for c in preview_cols if c in data.columns]].to_csv(index=False).encode("utf-8")
+            st.download_button(
+                "📥 Baixar resultados (CSV)",
+                data=csv_bytes,
+                file_name="estimativas_esforco.csv",
+                mime="text/csv"
+            )
+
+    # -------------------------
+    # TAB 3 — VISUALIZAÇÕES
+    # -------------------------
+    with res_tab3:
+        if "effort_hours_previsto" not in st.session_state.data.columns:
+            st.warning("⚠️ Calcule as estimativas primeiro na aba **Estimativas**.")
+        else:
+            data = st.session_state.data.dropna(subset=["effort_hours_previsto"]).copy()
+
+            if data.empty:
+                st.warning("⚠️ Nenhum resultado disponível para visualização.")
+            else:
+                st.subheader("📊 Distribuição do Esforço Estimado")
+                st.caption("Distribuição do esforço total previsto entre os projetos analisados.")
+
+                hist = alt.Chart(data).mark_bar().encode(
+                    x=alt.X("effort_hours_previsto:Q",
+                            bin=alt.Bin(maxbins=20),
+                            title="Esforço Previsto (horas)"),
+                    y=alt.Y("count()", title="Nº de Projetos"),
+                    tooltip=["count()"]
+                ).properties(height=350)
+                st.altair_chart(hist, use_container_width=True)
+
+                st.markdown("---")
+                st.subheader("📐 Function Points × Esforço Previsto")
+                st.caption("Quanto maior o tamanho funcional, maior tende a ser o esforço. Verifique se a relação faz sentido para seus projetos.")
+
+                scatter_fp = alt.Chart(data).mark_circle(size=80, opacity=0.8).encode(
+                    x=alt.X("function_points:Q", title="Function Points"),
+                    y=alt.Y("effort_hours_previsto:Q", title="Esforço Previsto (h)"),
+                    tooltip=[
+                        alt.Tooltip("project_id:N", title="Projeto"),
+                        alt.Tooltip("function_points:Q", title="Function Points"),
+                        alt.Tooltip("effort_hours_previsto:Q", title="Esforço (h)", format=".0f"),
+                    ]
+                ).properties(height=350)
+                st.altair_chart(scatter_fp, use_container_width=True)
+
+                st.markdown("---")
+                st.subheader("⚙️ Complex Processing × Esforço Previsto")
+                st.caption("O fator de complexidade técnica captura uma parte significativa do esforço via PCA.")
+
+                scatter_cp = alt.Chart(data).mark_circle(size=80, opacity=0.8, color="#F4845F").encode(
+                    x=alt.X("complex_processing:Q", title="Complex Processing"),
+                    y=alt.Y("effort_hours_previsto:Q", title="Esforço Previsto (h)"),
+                    tooltip=[
+                        alt.Tooltip("project_id:N", title="Projeto"),
+                        alt.Tooltip("complex_processing:Q", title="Complex Processing"),
+                        alt.Tooltip("effort_hours_previsto:Q", title="Esforço (h)", format=".0f"),
+                    ]
+                ).properties(height=350)
+                st.altair_chart(scatter_cp, use_container_width=True)
+
+                if len(data) > 1:
+                    st.markdown("---")
+                    st.subheader("📊 Comparativo de Esforço por Projeto")
+                    st.caption("Barras ordenadas por esforço estimado — facilita priorização e comparação entre projetos.")
+
+                    bar_data = data.sort_values("effort_hours_previsto", ascending=False).head(30)
+                    bar = alt.Chart(bar_data).mark_bar().encode(
+                        x=alt.X("project_id:N",
+                                sort="-y",
+                                title="Projeto",
+                                axis=alt.Axis(labelAngle=-30)),
+                        y=alt.Y("effort_hours_previsto:Q", title="Esforço Previsto (h)"),
+                        color=alt.Color("effort_hours_previsto:Q",
+                                        scale=alt.Scale(scheme="blues"),
+                                        legend=None),
+                        tooltip=[
+                            alt.Tooltip("project_id:N", title="Projeto"),
+                            alt.Tooltip("effort_hours_previsto:Q", title="Esforço (h)", format=".0f"),
+                            alt.Tooltip("semanas_estimadas:Q", title="Semanas"),
+                        ]
+                    ).properties(height=400)
+                    st.altair_chart(bar, use_container_width=True)
+
+# ---------------------------------------------------------------
+# Sidebar FAQ
+# ---------------------------------------------------------------
 st.sidebar.title("ℹ️ FAQ")
-# st.sidebar.button(on_click=close, label="🔄 Recarregar App")
-
 st.sidebar.markdown("""
-**O que é este aplicativo?**  
-Um estimador de produtividade de equipes ágeis utilizando técnicas de Inteligência Artificial.  
+**O que o Agile Estimator v2 faz?**
+Estima o **esforço total** (em horas-pessoa) para desenvolver um projeto de software, usando IA treinada em dados reais.
 
-**Como usar?**  
-1. Carregue seus dados.  
-2. Clique em **Fazer Estimativa**.  
-3. Explore as visualizações interativas.  
-4. Baixe os resultados.  
+**Qual a diferença para a v1?**
+A v1 previa produtividade por sprint. A v2 prediz esforço total do projeto, usando um modelo mais robusto com validação cruzada e PCA.
 
+**Como usar?**
+1. Insira os dados (manual, CSV ou Trello).
+2. Clique em **Calcular Esforço Total Estimado**.
+3. Visualize e baixe os resultados.
+
+**O que são Function Points?**
+Uma métrica de tamanho funcional de software, independente de tecnologia. Representa a quantidade de funcionalidade entregue ao usuário.
+
+**Qual a precisão do modelo?**
+MAPE médio ~49%. Use como estimativa inicial e para comparação relativa entre projetos.
 """)
 
 st.markdown("---")
-st.caption("Agile Estimator 0.0.1 — © 2025 Todos os direitos reservados.")
+st.caption("Agile Estimator v2 — © 2025 Todos os direitos reservados.")

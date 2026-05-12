@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    container_name: agile_api
+    ports:
+      - "8000:10000"
+    volumes:
+      - .:/app
+    restart: always
