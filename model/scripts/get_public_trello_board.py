@@ -52,4 +52,5 @@ def get_trello_cards_public(url: str) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-get_trello_cards_public("https://trello.com/b/DKf6KNh2/testeagileestimator")
+if __name__ == "__main__":
+    get_trello_cards_public("https://trello.com/b/DKf6KNh2/testeagileestimator")
