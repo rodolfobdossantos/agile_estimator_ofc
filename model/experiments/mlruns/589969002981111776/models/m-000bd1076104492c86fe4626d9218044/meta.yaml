@@ -1,0 +1,10 @@
+artifact_location: file:c:\agile_estimator_ofc\model\experiments\mlruns/589969002981111776/models/m-000bd1076104492c86fe4626d9218044/artifacts
+creation_timestamp: 1773595322445
+experiment_id: '589969002981111776'
+last_updated_timestamp: 1773595325212
+model_id: m-000bd1076104492c86fe4626d9218044
+model_type: null
+name: RandomForest
+source_run_id: 4613787c30a94cb7b5ddef8656462597
+status: 2
+status_message: null

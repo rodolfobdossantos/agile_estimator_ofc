@@ -2,6 +2,7 @@
 .env
 .claude
 .venv
+*.log
 
 # Ignora o arquivo de anotações
 anotacoes-agile-estimator.txt
@@ -12,4 +13,4 @@ venv/
 data/raw/*
 __pycache__
 .ipynb_checkpoints
-mlruns
+# mlruns rastreado para deploy do MLflow UI no Render

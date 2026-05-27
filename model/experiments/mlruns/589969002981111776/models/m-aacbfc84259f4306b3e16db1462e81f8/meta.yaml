@@ -1,0 +1,10 @@
+artifact_location: file:c:\agile_estimator_ofc\model\experiments\mlruns/589969002981111776/models/m-aacbfc84259f4306b3e16db1462e81f8/artifacts
+creation_timestamp: 1773593986962
+experiment_id: '589969002981111776'
+last_updated_timestamp: 1773593990092
+model_id: m-aacbfc84259f4306b3e16db1462e81f8
+model_type: null
+name: Lasso
+source_run_id: 15691ad7410c46a39053627b4cb5c42a
+status: 2
+status_message: null

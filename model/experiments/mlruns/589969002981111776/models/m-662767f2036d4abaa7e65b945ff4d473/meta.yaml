@@ -1,0 +1,10 @@
+artifact_location: file:c:\agile_estimator_ofc\model\experiments\mlruns/589969002981111776/models/m-662767f2036d4abaa7e65b945ff4d473/artifacts
+creation_timestamp: 1773594845978
+experiment_id: '589969002981111776'
+last_updated_timestamp: 1773594849361
+model_id: m-662767f2036d4abaa7e65b945ff4d473
+model_type: null
+name: GradientBoosting
+source_run_id: 8288c27b3eea440e89e932eb756d867d
+status: 2
+status_message: null

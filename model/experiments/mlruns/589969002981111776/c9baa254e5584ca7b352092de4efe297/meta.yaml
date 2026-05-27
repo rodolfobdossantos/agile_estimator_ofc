@@ -1,0 +1,14 @@
+artifact_uri: file:c:\agile_estimator_ofc\model\experiments\mlruns/589969002981111776/c9baa254e5584ca7b352092de4efe297/artifacts
+end_time: 1775513526098
+entry_point_name: ''
+experiment_id: '589969002981111776'
+lifecycle_stage: active
+run_id: c9baa254e5584ca7b352092de4efe297
+run_name: Lasso
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1775513522274
+status: 3
+tags: []
+user_id: savio

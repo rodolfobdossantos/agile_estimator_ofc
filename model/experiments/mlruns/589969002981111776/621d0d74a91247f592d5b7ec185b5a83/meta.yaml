@@ -1,0 +1,15 @@
+artifact_uri: file:c:\agile_estimator_ofc\model\experiments\mlruns/589969002981111776/621d0d74a91247f592d5b7ec185b5a83/artifacts
+deleted_time: 1773594582098
+end_time: 1773593312533
+entry_point_name: ''
+experiment_id: '589969002981111776'
+lifecycle_stage: deleted
+run_id: 621d0d74a91247f592d5b7ec185b5a83
+run_name: SVR
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1773593309170
+status: 3
+tags: []
+user_id: savio

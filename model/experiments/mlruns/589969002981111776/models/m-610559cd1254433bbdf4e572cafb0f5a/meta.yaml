@@ -1,0 +1,10 @@
+artifact_location: file:c:\agile_estimator_ofc\model\experiments\mlruns/589969002981111776/models/m-610559cd1254433bbdf4e572cafb0f5a/artifacts
+creation_timestamp: 1775513185544
+experiment_id: '589969002981111776'
+last_updated_timestamp: 1775513188860
+model_id: m-610559cd1254433bbdf4e572cafb0f5a
+model_type: null
+name: SVR
+source_run_id: 62c8269b4c594c9fb0ea7cabc42a1ded
+status: 2
+status_message: null

@@ -1,0 +1,15 @@
+artifact_uri: file:c:\agile_estimator_ofc\model\experiments\mlruns/589969002981111776/b6e8d7cbf8c94ed5a77d7b867af1b0e4/artifacts
+deleted_time: 1773594582109
+end_time: 1773593305703
+entry_point_name: ''
+experiment_id: '589969002981111776'
+lifecycle_stage: deleted
+run_id: b6e8d7cbf8c94ed5a77d7b867af1b0e4
+run_name: Ridge
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1773593302205
+status: 3
+tags: []
+user_id: savio

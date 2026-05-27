@@ -1,0 +1,14 @@
+artifact_uri: file:c:\agile_estimator_ofc\model\experiments\mlruns/589969002981111776/4613787c30a94cb7b5ddef8656462597/artifacts
+end_time: 1773595325216
+entry_point_name: ''
+experiment_id: '589969002981111776'
+lifecycle_stage: active
+run_id: 4613787c30a94cb7b5ddef8656462597
+run_name: RandomForest
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1773595197523
+status: 3
+tags: []
+user_id: savio

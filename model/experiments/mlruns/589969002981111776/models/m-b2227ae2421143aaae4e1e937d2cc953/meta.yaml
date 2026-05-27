@@ -1,0 +1,10 @@
+artifact_location: file:c:\agile_estimator_ofc\model\experiments\mlruns/589969002981111776/models/m-b2227ae2421143aaae4e1e937d2cc953/artifacts
+creation_timestamp: 1773593171707
+experiment_id: '589969002981111776'
+last_updated_timestamp: 1773593174631
+model_id: m-b2227ae2421143aaae4e1e937d2cc953
+model_type: null
+name: Ridge
+source_run_id: 00c7f62f280942d6b4266f6d8e5d426b
+status: 2
+status_message: null

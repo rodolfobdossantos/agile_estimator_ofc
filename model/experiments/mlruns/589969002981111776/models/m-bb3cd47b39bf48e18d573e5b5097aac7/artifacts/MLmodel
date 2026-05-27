@@ -1,0 +1,23 @@
+artifact_path: file:c:\agile_estimator_ofc\model\experiments\mlruns/589969002981111776/models/m-bb3cd47b39bf48e18d573e5b5097aac7/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.14.3
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.8.0
+    skops_trusted_types: null
+mlflow_version: 3.10.1
+model_id: m-bb3cd47b39bf48e18d573e5b5097aac7
+model_size_bytes: 582518
+model_uuid: m-bb3cd47b39bf48e18d573e5b5097aac7
+prompts: null
+run_id: 23afe4f77bc045cfb80e1fbf9ddf0edb
+utc_time_created: '2026-04-06 22:14:20.373275'

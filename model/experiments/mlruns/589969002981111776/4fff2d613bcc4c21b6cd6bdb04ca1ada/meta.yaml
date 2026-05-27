@@ -1,0 +1,14 @@
+artifact_uri: file:c:\agile_estimator_ofc\model\experiments\mlruns/589969002981111776/4fff2d613bcc4c21b6cd6bdb04ca1ada/artifacts
+end_time: 1775513349244
+entry_point_name: ''
+experiment_id: '589969002981111776'
+lifecycle_stage: active
+run_id: 4fff2d613bcc4c21b6cd6bdb04ca1ada
+run_name: GradientBoosting
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1775513331598
+status: 3
+tags: []
+user_id: savio
