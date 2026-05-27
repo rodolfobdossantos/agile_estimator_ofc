@@ -93,7 +93,7 @@ def preprocess_for_api(row: dict) -> dict:
 
 def call_predict_api(payload: dict) -> float:
     """POST to Render API; return effort_hours (already exp-transformed)."""
-    resp = requests.post(API_URL, json=payload, timeout=30)
+    resp = requests.post(API_URL, json=payload, timeout=60)
     resp.raise_for_status()
     return float(resp.json()["prediction"])
 
@@ -538,7 +538,10 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                         st.session_state.data = result_df
 
                         if errors:
-                            st.warning(f"⚠️ {len(errors)} erro(s) durante a inferência: {errors[0]}")
+                            msg = errors[0]
+                            cold_start = "timed out" in msg.lower() or "Read timed out" in msg
+                            dica = (" A API pode estar em cold start (plano gratuito Render — aguarde ~30s e tente novamente)." if cold_start else "")
+                            st.warning(f"⚠️ {len(errors)} erro(s) durante a inferência: {msg}{dica}")
 
                         valid = result_df["effort_hours_previsto"].notna().sum()
                         st.success(f"✅ Estimativas calculadas para {valid} projeto(s)!")
@@ -552,37 +555,42 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
             preview = data[[c for c in preview_cols if c in data.columns]].copy()
 
             max_h = preview["effort_hours_previsto"].max()
-            if max_h and max_h > 0:
+            if pd.notna(max_h) and max_h > 0:
                 preview["Escala"] = preview["effort_hours_previsto"].apply(
                     lambda x: "█" * int((x / max_h) * 20) if pd.notna(x) else ""
                 )
 
-            st.markdown("### 📈 Resultados")
-            st.dataframe(
-                preview.style.format({"effort_hours_previsto": "{:.0f} h"}),
-                use_container_width=True
-            )
+            valid_count = preview["effort_hours_previsto"].notna().sum()
+            if valid_count == 0:
+                st.warning("⚠️ Nenhuma estimativa disponível. Tente novamente — a API pode estar aquecendo (cold start ~30s).")
+            else:
+                st.markdown("### 📈 Resultados")
+                fmt = {"effort_hours_previsto": lambda x: f"{x:.0f} h" if pd.notna(x) else "-"}
+                st.dataframe(
+                    preview.style.format(fmt),
+                    use_container_width=True
+                )
 
-            st.markdown("""
-            #### ℹ️ O que cada coluna significa
+                st.markdown("""
+                #### ℹ️ O que cada coluna significa
 
-            | Coluna | Descrição |
-            |--------|-----------|
-            | **Esforço Previsto (h)** | Total de horas-pessoa estimado para desenvolver o projeto completo |
-            | **Dias Estimados** | Horas ÷ 8 horas/dia útil, arredondado para cima |
-            | **Semanas Estimadas** | Dias ÷ 5 dias úteis/semana, arredondado para cima |
-            | **Escala** | Comparação visual relativa entre projetos |
+                | Coluna | Descrição |
+                |--------|-----------|
+                | **Esforço Previsto (h)** | Total de horas-pessoa estimado para desenvolver o projeto completo |
+                | **Dias Estimados** | Horas ÷ 8 horas/dia útil, arredondado para cima |
+                | **Semanas Estimadas** | Dias ÷ 5 dias úteis/semana, arredondado para cima |
+                | **Escala** | Comparação visual relativa entre projetos |
 
-            > ⚠️ O esforço estimado representa o **projeto inteiro**, não uma sprint individual.
-            """)
+                > ⚠️ O esforço estimado representa o **projeto inteiro**, não uma sprint individual.
+                """)
 
-            csv_bytes = data[[c for c in preview_cols if c in data.columns]].to_csv(index=False).encode("utf-8")
-            st.download_button(
-                "📥 Baixar resultados (CSV)",
-                data=csv_bytes,
-                file_name="estimativas_esforco.csv",
-                mime="text/csv"
-            )
+                csv_bytes = data[[c for c in preview_cols if c in data.columns]].to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    "📥 Baixar resultados (CSV)",
+                    data=csv_bytes,
+                    file_name="estimativas_esforco.csv",
+                    mime="text/csv"
+                )
 
     # -------------------------
     # TAB 3 — VISUALIZAÇÕES
