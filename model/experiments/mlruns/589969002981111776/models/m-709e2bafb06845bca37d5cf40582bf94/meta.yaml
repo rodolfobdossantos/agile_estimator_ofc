@@ -1,4 +1,4 @@
-artifact_location: file:c:\agile_estimator_ofc\model\experiments\mlruns/589969002981111776/models/m-709e2bafb06845bca37d5cf40582bf94/artifacts
+artifact_location: file:///app/mlruns/589969002981111776/models/m-709e2bafb06845bca37d5cf40582bf94/artifacts
 creation_timestamp: 1773595444669
 experiment_id: '589969002981111776'
 last_updated_timestamp: 1773595447984

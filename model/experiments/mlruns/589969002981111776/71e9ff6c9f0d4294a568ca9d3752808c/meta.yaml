@@ -1,4 +1,4 @@
-artifact_uri: file:c:\agile_estimator_ofc\model\experiments\mlruns/589969002981111776/71e9ff6c9f0d4294a568ca9d3752808c/artifacts
+artifact_uri: file:///app/mlruns/589969002981111776/71e9ff6c9f0d4294a568ca9d3752808c/artifacts
 end_time: 1773594697448
 entry_point_name: ''
 experiment_id: '589969002981111776'
