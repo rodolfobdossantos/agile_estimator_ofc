@@ -12,4 +12,6 @@ CMD ["sh", "-c", "mlflow server \
     --backend-store-uri file:///app/mlruns \
     --default-artifact-root file:///app/mlruns \
     --host 0.0.0.0 \
-    --port ${PORT:-5000}"]
+    --port ${PORT:-5000} \
+    --workers 1 \
+    --allowed-hosts '*'"]
