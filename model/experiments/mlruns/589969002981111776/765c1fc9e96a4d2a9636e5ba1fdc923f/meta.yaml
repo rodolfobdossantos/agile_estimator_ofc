@@ -5,6 +5,7 @@ entry_point_name: ''
 experiment_id: '589969002981111776'
 lifecycle_stage: deleted
 run_id: 765c1fc9e96a4d2a9636e5ba1fdc923f
+run_uuid: 765c1fc9e96a4d2a9636e5ba1fdc923f
 run_name: SVR
 source_name: ''
 source_type: 4

@@ -5,6 +5,7 @@ entry_point_name: ''
 experiment_id: '589969002981111776'
 lifecycle_stage: deleted
 run_id: 15691ad7410c46a39053627b4cb5c42a
+run_uuid: 15691ad7410c46a39053627b4cb5c42a
 run_name: Lasso
 source_name: ''
 source_type: 4

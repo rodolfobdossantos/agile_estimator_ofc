@@ -5,6 +5,7 @@ entry_point_name: ''
 experiment_id: '589969002981111776'
 lifecycle_stage: deleted
 run_id: 2b56612841b4478dad29c93017391f60
+run_uuid: 2b56612841b4478dad29c93017391f60
 run_name: RandomForest
 source_name: ''
 source_type: 4

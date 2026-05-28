@@ -4,6 +4,7 @@ entry_point_name: ''
 experiment_id: '589969002981111776'
 lifecycle_stage: active
 run_id: bea1180db6c54c17820bcc2353d7703c
+run_uuid: bea1180db6c54c17820bcc2353d7703c
 run_name: Ridge
 source_name: ''
 source_type: 4
