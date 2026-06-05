@@ -140,17 +140,17 @@ st.write("Estime o esforço de projetos de software com o apoio de **Inteligênc
 # Input tabs
 # ---------------------------------------------------------------
 tab_tutorial, tab_input, tab_csv, tab_trello = st.tabs([
-    "ℹ️ Sobre o Agile Estimator",
-    "✏️ Inserir dados manualmente",
-    "📂 Importar CSV",
-    "🔗 Importar do Trello",
+    "Sobre o Agile Estimator",
+    "Inserir dados manualmente",
+    "Importar CSV",
+    "Importar do Trello",
 ])
 
 # ===========================
 # SOBRE O AGILE ESTIMATOR
 # ===========================
 with tab_tutorial:
-    st.title("ℹ️ Sobre o Agile Estimator")
+    st.title("Sobre o Agile Estimator")
     st.markdown("""
     O **Agile Estimator** utiliza Inteligência Artificial e técnicas de Machine Learning para estimar
     o esforço total necessário para o desenvolvimento de projetos de software. As previsões são geradas
@@ -161,7 +161,7 @@ with tab_tutorial:
     ---
     """)
 
-    st.subheader("📊 Sobre o modelo")
+    st.subheader("Sobre o modelo")
     st.markdown("""
     As estimativas são geradas por um modelo de Inteligência Artificial treinado com dados reais de
     projetos de software. Durante o desenvolvimento, diferentes técnicas de Machine Learning foram
@@ -176,7 +176,7 @@ with tab_tutorial:
     """)
 
     st.markdown("---")
-    st.subheader("📋 Informações necessárias para gerar a estimativa")
+    st.subheader("Informações necessárias para gerar a estimativa")
     st.markdown("Para calcular o esforço do projeto, informe os seguintes dados:")
 
     st.markdown("""
@@ -190,7 +190,7 @@ with tab_tutorial:
     """)
 
     st.markdown("---")
-    st.subheader("📈 Resultados da estimativa")
+    st.subheader("Resultados da estimativa")
     st.markdown("""
     Após a análise dos dados informados, o Agile Estimator apresenta uma previsão do esforço necessário
     para o projeto nos seguintes formatos:
@@ -201,57 +201,57 @@ with tab_tutorial:
     | **Dias Estimados** | Conversão do esforço total para dias de trabalho, considerando uma jornada de 8 horas por dia. |
     | **Semanas Estimadas** | Conversão do esforço total para semanas úteis, considerando 5 dias de trabalho por semana. |
 
-    💡 **Importante:** Os valores representam uma estimativa inicial para apoiar o planejamento do projeto.
+    **Importante:** Os valores representam uma estimativa inicial para apoiar o planejamento do projeto.
     O esforço real pode variar conforme fatores como tamanho da equipe, experiência dos profissionais,
     mudanças de escopo, riscos e particularidades do ambiente de desenvolvimento.
     """)
 
     st.markdown("---")
-    st.subheader("⚠️ Limitações da estimativa")
+    st.subheader("Limitações da estimativa")
     st.markdown("""
     - As estimativas fornecidas representam uma previsão inicial e devem ser utilizadas como apoio ao planejamento e à tomada de decisão.
     - Como todo modelo preditivo, os resultados podem variar de acordo com as características específicas de cada projeto, equipe e contexto de desenvolvimento.
     - A ferramenta tende a ser mais útil para comparar cenários e analisar o impacto de diferentes características do projeto do que para determinar um prazo exato de execução.
     - Projetos com características muito diferentes dos projetos utilizados no treinamento do modelo podem apresentar maior variação nas estimativas.
 
-    💡 **Recomendação:** Utilize os resultados como uma referência inicial e combine-os com a experiência
+    **Recomendação:** Utilize os resultados como uma referência inicial e combine-os com a experiência
     da equipe, análise de riscos e conhecimento do negócio para obter estimativas mais robustas.
     """)
 
     st.markdown("---")
-    st.subheader("🗂️ Como utilizar o Agile Estimator")
+    st.subheader("Como utilizar o Agile Estimator")
     st.markdown("""
     O processo é simples e pode ser realizado em poucos passos:
     """)
 
     st.markdown("""
-    **1️⃣ Informe os dados do projeto**
+    **1. Informe os dados do projeto**
 
     Escolha a forma mais conveniente para fornecer as informações:
     - Preenchimento manual;
     - Importação de arquivo CSV;
     - Integração com um board do Trello.
 
-    **2️⃣ Gere a estimativa**
+    **2. Gere a estimativa**
 
     Clique em **Calcular Estimativa** para que a ferramenta analise os dados informados e processe a previsão de esforço.
 
-    **3️⃣ Analise os resultados**
+    **3. Analise os resultados**
 
     Visualize a estimativa de esforço em:
     - Horas-pessoa;
     - Dias de trabalho;
     - Semanas de projeto.
 
-    **4️⃣ Exporte ou compartilhe os dados**
+    **4. Exporte ou compartilhe os dados**
 
     Baixe os resultados em formato CSV para utilização em planejamentos, relatórios ou análises complementares.
 
-    **5️⃣ Compare diferentes cenários**
+    **5. Compare diferentes cenários**
 
     Utilize a aba **Visualizações** para analisar e comparar projetos, identificando diferenças de tamanho, complexidade e esforço estimado.
 
-    💡 **Dica:** Experimente alterar alguns parâmetros do projeto para entender como fatores como tamanho
+    **Dica:** Experimente alterar alguns parâmetros do projeto para entender como fatores como tamanho
     funcional e complexidade podem impactar a estimativa final.
     """)
 
@@ -259,7 +259,7 @@ with tab_tutorial:
 # INPUT MANUAL
 # ===========================
 with tab_input:
-    st.subheader("✏️ Inserir dados manualmente")
+    st.subheader("Inserir dados manualmente")
 
     if "input_user" not in st.session_state:
         st.session_state.input_user = {
@@ -275,7 +275,7 @@ with tab_input:
 
     with col1:
         project_id = st.text_input(
-            "🆔 Projeto",
+            "Projeto",
             value=st.session_state.input_user["project_id"],
             help="Identificador único do projeto (ex: projeto_alpha)"
         )
@@ -283,7 +283,7 @@ with tab_input:
             project_id = f"projeto_{np.random.randint(100, 999)}"
 
         function_points = st.number_input(
-            "📐 Tamanho do Projeto (AFP)",
+            "Tamanho do Projeto (AFP)",
             min_value=0.0,
             value=float(st.session_state.input_user["function_points"]),
             step=10.0,
@@ -291,7 +291,7 @@ with tab_input:
         )
 
         performance_requirements = st.number_input(
-            "⚡ Requisitos de Desempenho (1–5)",
+            "Requisitos de Desempenho (1–5)",
             min_value=1.0,
             max_value=5.0,
             value=float(st.session_state.input_user["performance_requirements"]),
@@ -301,7 +301,7 @@ with tab_input:
 
     with col2:
         complex_processing = st.number_input(
-            "⚙️ Complexidade Técnica (1–5)",
+            "Complexidade Técnica (1–5)",
             min_value=1.0,
             max_value=5.0,
             value=float(st.session_state.input_user["complex_processing"]),
@@ -310,7 +310,7 @@ with tab_input:
         )
 
         installation_ease = st.number_input(
-            "📦 Facilidade de Implantação (1–5)",
+            "Facilidade de Implantação (1–5)",
             min_value=1.0,
             max_value=5.0,
             value=float(st.session_state.input_user["installation_ease"]),
@@ -319,7 +319,7 @@ with tab_input:
         )
 
         additional_complexity_factor = st.number_input(
-            "🔧 Complexidade Adicional (1–5)",
+            "Complexidade Adicional (1–5)",
             min_value=1.0,
             max_value=5.0,
             value=float(st.session_state.input_user["additional_complexity_factor"]),
@@ -339,7 +339,7 @@ with tab_input:
     _, col_btn1, col_btn2, _ = st.columns([1, 1, 1, 1])
 
     with col_btn1:
-        if st.button("✅ Adicionar Projeto", use_container_width=True):
+        if st.button("Adicionar Projeto", use_container_width=True):
             new_row = pd.DataFrame([st.session_state.input_user])
             for col in REQUIRED_COLUMNS + ["function_points"]:
                 if col in new_row.columns:
@@ -352,11 +352,11 @@ with tab_input:
                 st.session_state.data = new_row.copy()
 
             st.session_state.last_source = "manual"
-            st.toast("Projeto adicionado com sucesso!", icon="✅")
+            st.toast("Projeto adicionado com sucesso!", icon=None)
             st.rerun()
 
     with col_btn2:
-        if st.button("🔄 Resetar formulário", use_container_width=True):
+        if st.button("Resetar formulário", use_container_width=True):
             st.session_state.input_user = {
                 "project_id": "projeto_001",
                 "function_points": 300.0,
@@ -366,11 +366,11 @@ with tab_input:
                 "additional_complexity_factor": 3.0,
             }
             st.session_state.data = None
-            st.toast("Formulário e dados resetados.", icon="🧹")
+            st.toast("Formulário e dados resetados.", icon=None)
             st.rerun()
 
     st.markdown("---")
-    with st.expander("🧮 Calculadora IFPUG de Function Points", expanded=False):
+    with st.expander("Calculadora IFPUG de Function Points", expanded=False):
         st.markdown("""
         Utilize esta calculadora para obter os **Adjusted Function Points (AFP)** do seu projeto
         com base no método **IFPUG** — o mesmo padrão utilizado no dataset de treinamento do modelo.
@@ -428,16 +428,16 @@ with tab_input:
                 st.info(f"AFP = UFP = **{ufp}** (sem ajuste VAF)")
 
         if ufp > 0:
-            if st.button("📋 Utilizar este valor como Tamanho do Projeto (AFP)", key="use_fp_calc"):
+            if st.button("Utilizar este valor como Tamanho do Projeto (AFP)", key="use_fp_calc"):
                 st.session_state.input_user["function_points"] = fp_result
-                st.success(f"✅ Tamanho do Projeto definido para **{fp_result}**. Ajuste os demais campos e clique em *Adicionar Projeto*.")
+                st.success(f"Tamanho do Projeto definido para **{fp_result}**. Ajuste os demais campos e clique em *Adicionar Projeto*.")
                 st.rerun()
 
 # ===========================
 # UPLOAD CSV
 # ===========================
 with tab_csv:
-    st.subheader("📂 Importar projetos por arquivo CSV")
+    st.subheader("Importar projetos por arquivo CSV")
     st.markdown("""
     Envie um arquivo CSV contendo as informações dos projetos que deseja analisar.
     A ferramenta processará automaticamente cada registro e gerará as estimativas correspondentes.
@@ -452,7 +452,7 @@ with tab_csv:
     **Campo opcional:**
     - `project_id` (nome ou identificador do projeto)
 
-    💡 **Dica:** Utilize o campo `project_id` para facilitar a identificação dos projetos nos resultados,
+    **Dica:** Utilize o campo `project_id` para facilitar a identificação dos projetos nos resultados,
     gráficos e relatórios exportados.
     """)
 
@@ -463,7 +463,7 @@ with tab_csv:
     ])
     template_csv = template_df.to_csv(index=False).encode("utf-8")
     st.download_button(
-        "📥 Baixar Template de CSV",
+        "Baixar Template de CSV",
         data=template_csv,
         file_name="template_agile_estimator.csv",
         mime="text/csv",
@@ -477,7 +477,7 @@ with tab_csv:
         missing = validate_columns(df_csv)
 
         if missing:
-            st.error(f"❌ Colunas obrigatórias ausentes: {', '.join(missing)}")
+            st.error(f"Colunas obrigatórias ausentes: {', '.join(missing)}")
         else:
             if "project_id" not in df_csv.columns:
                 df_csv.insert(0, "project_id", [f"projeto_{i+1}" for i in range(len(df_csv))])
@@ -485,19 +485,19 @@ with tab_csv:
             st.dataframe(df_csv.head(10), use_container_width=True)
             st.caption(f"{len(df_csv)} projeto(s) encontrado(s) no arquivo.")
 
-            if st.button("📥 Carregar este CSV", use_container_width=False):
+            if st.button("Carregar este CSV", use_container_width=False):
                 st.session_state.data = df_csv.copy()
                 st.session_state.last_source = "csv"
-                st.toast(f"{len(df_csv)} projeto(s) carregado(s)!", icon="✅")
+                st.toast(f"{len(df_csv)} projeto(s) carregado(s)!", icon=None)
                 st.rerun()
     else:
-        st.info("📁 Nenhum CSV carregado ainda.")
+        st.info("Nenhum CSV carregado ainda.")
 
 # ===========================
 # TRELLO
 # ===========================
 with tab_trello:
-    st.subheader("🔗 Importar projetos do Trello")
+    st.subheader("Importar projetos do Trello")
     st.markdown("""
     Importe automaticamente as informações dos projetos a partir de um board do Trello.
     Basta informar o link de um **board público** e a ferramenta irá analisar os cartões
@@ -510,11 +510,11 @@ with tab_trello:
     - Installation Ease
     - Additional Complexity Factor
 
-    💡 **Dica:** Utilize um cartão para cada projeto que deseja estimar. Os resultados serão
+    **Dica:** Utilize um cartão para cada projeto que deseja estimar. Os resultados serão
     gerados automaticamente após a importação dos dados.
     """)
 
-    st.markdown("**🔗 Link do Board Trello**")
+    st.markdown("**Link do Board Trello**")
     st.markdown("Cole abaixo a URL do board público que deseja analisar.")
 
     trello_url = st.text_input(
@@ -526,9 +526,9 @@ with tab_trello:
 
     if trello_url:
         if not re.match(trello_regex, trello_url):
-            st.error("❌ Link inválido. Utilize o formato: `https://trello.com/b/<board_id>`")
+            st.error("Link inválido. Utilize o formato: `https://trello.com/b/<board_id>`")
         else:
-            if st.button("🔍 Buscar projetos do Trello", use_container_width=False):
+            if st.button("Buscar projetos do Trello", use_container_width=False):
                 with st.spinner("Buscando dados do Trello..."):
                     try:
                         df_trello = get_trello_cards_public(trello_url)
@@ -536,27 +536,27 @@ with tab_trello:
 
                         if missing:
                             st.warning(
-                                f"⚠️ Campos não encontrados nos cartões: {', '.join(missing)}. "
+                                f"Campos não encontrados nos cartões: {', '.join(missing)}. "
                                 "Verifique os nomes dos campos personalizados no board."
                             )
                         elif df_trello.dropna(subset=REQUIRED_COLUMNS).empty:
-                            st.warning("⚠️ Nenhum cartão com todos os campos preenchidos foi encontrado.")
+                            st.warning("Nenhum cartão com todos os campos preenchidos foi encontrado.")
                         else:
                             df_trello = df_trello.dropna(subset=REQUIRED_COLUMNS).reset_index(drop=True)
                             st.session_state.trello_preview = df_trello.copy()
                     except Exception as e:
-                        st.error(f"❌ Erro ao buscar dados do Trello: {e}")
+                        st.error(f"Erro ao buscar dados do Trello: {e}")
                         st.session_state.pop("trello_preview", None)
 
             if "trello_preview" in st.session_state:
                 df_preview = st.session_state.trello_preview
                 st.dataframe(df_preview.head(10), use_container_width=True)
                 st.caption(f"{len(df_preview)} projeto(s) encontrado(s) no board.")
-                if st.button("📥 Carregar estes projetos", use_container_width=False):
+                if st.button("Carregar estes projetos", use_container_width=False):
                     st.session_state.data = df_preview.copy()
                     st.session_state.last_source = "trello"
                     st.session_state.pop("trello_preview", None)
-                    st.toast(f"{len(df_preview)} projeto(s) importado(s) do Trello!", icon="✅")
+                    st.toast(f"{len(df_preview)} projeto(s) importado(s) do Trello!", icon=None)
                     st.rerun()
 
 # ---------------------------------------------------------------
@@ -569,9 +569,9 @@ if st.session_state.get("data") is not None:
     with col_status:
         source = st.session_state.get("last_source", "?").upper()
         n = len(st.session_state.data)
-        st.info(f"📂 **{n} projeto(s)** carregado(s) — origem: **{source}**")
+        st.info(f"**{n} projeto(s)** carregado(s) — origem: **{source}**")
     with col_clear:
-        if st.button("🗑️ Limpar dados", use_container_width=True):
+        if st.button("Limpar dados", use_container_width=True):
             st.session_state.data = None
             st.session_state.last_source = None
             st.rerun()
@@ -581,13 +581,13 @@ if st.session_state.get("data") is not None:
 # ---------------------------------------------------------------
 if "data" in st.session_state and st.session_state.data is not None and not st.session_state.data.empty:
 
-    res_tab1, res_tab2, res_tab3 = st.tabs(["📋 Dados", "📈 Estimativas", "📊 Visualizações"])
+    res_tab1, res_tab2, res_tab3 = st.tabs(["Dados", "Estimativas", "Visualizações"])
 
     # -------------------------
     # TAB 1 — DADOS
     # -------------------------
     with res_tab1:
-        st.subheader("📋 Projetos carregados")
+        st.subheader("Projetos carregados")
         display_cols = [c for c in ["project_id"] + REQUIRED_COLUMNS
                         if c in st.session_state.data.columns]
         st.dataframe(
@@ -600,12 +600,12 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
     # TAB 2 — ESTIMATIVAS
     # -------------------------
     with res_tab2:
-        st.subheader("⚡ Calcular Esforço Total Estimado")
+        st.subheader("Calcular Esforço Total Estimado")
 
-        if st.button("🚀 Calcular Estimativa", key="calc_esforco"):
+        if st.button("Calcular Estimativa", key="calc_esforco"):
             missing = validate_columns(st.session_state.data)
             if missing:
-                st.error(f"❌ Colunas faltando: {', '.join(missing)}")
+                st.error(f"Colunas faltando: {', '.join(missing)}")
             else:
                 with st.spinner("Calculando estimativas via API..."):
                     try:
@@ -616,10 +616,10 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                             msg = errors[0]
                             cold_start = "timed out" in msg.lower() or "Read timed out" in msg
                             dica = (" A API pode estar em cold start (plano gratuito Render — aguarde ~30s e tente novamente)." if cold_start else "")
-                            st.warning(f"⚠️ {len(errors)} erro(s) durante a inferência: {msg}{dica}")
+                            st.warning(f"{len(errors)} erro(s) durante a inferência: {msg}{dica}")
 
                         valid = result_df["effort_hours_previsto"].notna().sum()
-                        st.success(f"✅ Estimativas calculadas para {valid} projeto(s)!")
+                        st.success(f"Estimativas calculadas para {valid} projeto(s)!")
                     except Exception as e:
                         st.exception(e)
 
@@ -637,9 +637,9 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
 
             valid_count = preview["effort_hours_previsto"].notna().sum()
             if valid_count == 0:
-                st.warning("⚠️ Nenhuma estimativa disponível. Tente novamente — a API pode estar aquecendo (cold start ~30s).")
+                st.warning("Nenhuma estimativa disponível. Tente novamente — a API pode estar aquecendo (cold start ~30s).")
             else:
-                st.markdown("### 📈 Resultados")
+                st.markdown("### Resultados")
 
                 # Renomeia para exibição
                 preview_display = display_df(preview)
@@ -660,16 +660,16 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                 | **Semanas Estimadas** | Conversão do esforço total para semanas úteis, considerando 5 dias de trabalho por semana. |
                 | **Comparação Visual** | Representação visual que facilita a comparação do esforço estimado entre diferentes projetos analisados. |
 
-                💡 **Importante:** As estimativas representam o esforço total necessário para a conclusão do projeto
+                **Importante:** As estimativas representam o esforço total necessário para a conclusão do projeto
                 e devem ser utilizadas como apoio ao planejamento e à tomada de decisão.
 
-                ⚠️ **Atenção:** Os valores apresentados referem-se ao projeto completo e não a uma sprint,
+                **Atenção:** Os valores apresentados referem-se ao projeto completo e não a uma sprint,
                 tarefa específica ou período isolado de desenvolvimento.
                 """)
 
                 csv_bytes = data[[c for c in preview_cols if c in data.columns]].to_csv(index=False).encode("utf-8")
                 st.download_button(
-                    "📥 Exportar Resultados (CSV)",
+                    "Exportar Resultados (CSV)",
                     data=csv_bytes,
                     file_name="estimativas_esforco.csv",
                     mime="text/csv"
@@ -680,12 +680,12 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
     # -------------------------
     with res_tab3:
         if "effort_hours_previsto" not in st.session_state.data.columns:
-            st.warning("⚠️ Calcule as estimativas primeiro na aba **Estimativas**.")
+            st.warning("Calcule as estimativas primeiro na aba **Estimativas**.")
         else:
             data = st.session_state.data.dropna(subset=["effort_hours_previsto"]).copy()
 
             if data.empty:
-                st.warning("⚠️ Nenhum resultado disponível para visualização.")
+                st.warning("Nenhum resultado disponível para visualização.")
             else:
                 hist = alt.Chart(data).mark_bar().encode(
                     x=alt.X("effort_hours_previsto:Q",
@@ -697,7 +697,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                 st.altair_chart(hist, use_container_width=True)
 
                 st.markdown("---")
-                st.subheader("📐 Tamanho do Projeto × Esforço Estimado")
+                st.subheader("Tamanho do Projeto × Esforço Estimado")
                 st.caption("Este gráfico mostra como o tamanho funcional de cada projeto influencia a estimativa de esforço. Em geral, projetos maiores tendem a exigir mais tempo e recursos para serem desenvolvidos.")
 
                 scatter_fp = alt.Chart(data).mark_circle(size=80, opacity=0.8).encode(
@@ -712,7 +712,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                 st.altair_chart(scatter_fp, use_container_width=True)
 
                 st.markdown("---")
-                st.subheader("⚙️ Complexidade Técnica × Esforço Estimado")
+                st.subheader("Complexidade Técnica × Esforço Estimado")
                 st.caption("Compare como a complexidade técnica dos projetos influencia o esforço previsto. Em geral, projetos com regras de negócio mais elaboradas, integrações e processamento mais complexo tendem a exigir mais esforço de desenvolvimento.")
 
                 scatter_cp = alt.Chart(data).mark_circle(size=80, opacity=0.8, color="#F4845F").encode(
@@ -728,7 +728,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
 
                 if len(data) > 1:
                     st.markdown("---")
-                    st.subheader("📊 Comparação do Esforço entre Projetos")
+                    st.subheader("Comparação do Esforço entre Projetos")
                     st.caption("Compare visualmente o esforço estimado para cada projeto analisado. Quanto maior a barra, maior o esforço previsto para sua implementação.")
 
                     bar_data = data.sort_values("effort_hours_previsto", ascending=False).head(30)
@@ -752,7 +752,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
 # ---------------------------------------------------------------
 # Sidebar
 # ---------------------------------------------------------------
-st.sidebar.title("ℹ️ Sobre o Agile Estimator")
+st.sidebar.title("Sobre o Agile Estimator")
 st.sidebar.markdown("""
 **O que o Agile Estimator faz?**
 Utiliza Inteligência Artificial e técnicas de Machine Learning para estimar o esforço total necessário
