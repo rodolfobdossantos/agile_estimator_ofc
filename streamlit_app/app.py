@@ -140,17 +140,17 @@ st.write("Estime o esforço de projetos de software com o apoio de **Inteligênc
 # Input tabs
 # ---------------------------------------------------------------
 tab_tutorial, tab_input, tab_csv, tab_trello = st.tabs([
-    "Sobre o Agile Estimator",
-    "Inserir dados manualmente",
-    "Importar CSV",
-    "Importar do Trello",
+    ":material/info: Sobre o Agile Estimator",
+    ":material/edit_note: Inserir dados manualmente",
+    ":material/upload_file: Importar CSV",
+    ":material/link: Importar do Trello",
 ])
 
 # ===========================
 # SOBRE O AGILE ESTIMATOR
 # ===========================
 with tab_tutorial:
-    st.title("Sobre o Agile Estimator")
+    st.title(":material/info: Sobre o Agile Estimator")
     st.markdown("""
     O **Agile Estimator** utiliza Inteligência Artificial e técnicas de Machine Learning para estimar
     o esforço total necessário para o desenvolvimento de projetos de software. As previsões são geradas
@@ -161,7 +161,7 @@ with tab_tutorial:
     ---
     """)
 
-    st.subheader("Sobre o modelo")
+    st.subheader(":material/model_training: Sobre o modelo")
     st.markdown("""
     As estimativas são geradas por um modelo de Inteligência Artificial treinado com dados reais de
     projetos de software. Durante o desenvolvimento, diferentes técnicas de Machine Learning foram
@@ -176,7 +176,7 @@ with tab_tutorial:
     """)
 
     st.markdown("---")
-    st.subheader("Informações necessárias para gerar a estimativa")
+    st.subheader(":material/checklist: Informações necessárias para gerar a estimativa")
     st.markdown("Para calcular o esforço do projeto, informe os seguintes dados:")
 
     st.markdown("""
@@ -190,7 +190,7 @@ with tab_tutorial:
     """)
 
     st.markdown("---")
-    st.subheader("Resultados da estimativa")
+    st.subheader(":material/bar_chart: Resultados da estimativa")
     st.markdown("""
     Após a análise dos dados informados, o Agile Estimator apresenta uma previsão do esforço necessário
     para o projeto nos seguintes formatos:
@@ -207,7 +207,7 @@ with tab_tutorial:
     """)
 
     st.markdown("---")
-    st.subheader("Limitações da estimativa")
+    st.subheader(":material/warning: Limitações da estimativa")
     st.markdown("""
     - As estimativas fornecidas representam uma previsão inicial e devem ser utilizadas como apoio ao planejamento e à tomada de decisão.
     - Como todo modelo preditivo, os resultados podem variar de acordo com as características específicas de cada projeto, equipe e contexto de desenvolvimento.
@@ -219,7 +219,7 @@ with tab_tutorial:
     """)
 
     st.markdown("---")
-    st.subheader("Como utilizar o Agile Estimator")
+    st.subheader(":material/help_outline: Como utilizar o Agile Estimator")
     st.markdown("""
     O processo é simples e pode ser realizado em poucos passos:
     """)
@@ -339,7 +339,7 @@ with tab_input:
     _, col_btn1, col_btn2, _ = st.columns([1, 1, 1, 1])
 
     with col_btn1:
-        if st.button("Adicionar Projeto", use_container_width=True):
+        if st.button("Adicionar Projeto", icon=":material/add_circle:", use_container_width=True):
             new_row = pd.DataFrame([st.session_state.input_user])
             for col in REQUIRED_COLUMNS + ["function_points"]:
                 if col in new_row.columns:
@@ -356,7 +356,7 @@ with tab_input:
             st.rerun()
 
     with col_btn2:
-        if st.button("Resetar formulário", use_container_width=True):
+        if st.button("Resetar formulário", icon=":material/restart_alt:", use_container_width=True):
             st.session_state.input_user = {
                 "project_id": "projeto_001",
                 "function_points": 300.0,
@@ -403,7 +403,7 @@ with tab_input:
 
         ufp = sum(
             n_s * ws + n_m * wm + n_c * wc
-            for (func_type, (ws, wm, wc)), (n_s, n_m, n_c) in zip(IFPUG_WEIGHTS.items(), fp_counts.values())
+            for (_, (ws, wm, wc)), (n_s, n_m, n_c) in zip(IFPUG_WEIGHTS.items(), fp_counts.values())
         )
 
         st.markdown("---")
@@ -428,7 +428,7 @@ with tab_input:
                 st.info(f"AFP = UFP = **{ufp}** (sem ajuste VAF)")
 
         if ufp > 0:
-            if st.button("Utilizar este valor como Tamanho do Projeto (AFP)", key="use_fp_calc"):
+            if st.button("Utilizar este valor como Tamanho do Projeto (AFP)", icon=":material/check:", key="use_fp_calc"):
                 st.session_state.input_user["function_points"] = fp_result
                 st.success(f"Tamanho do Projeto definido para **{fp_result}**. Ajuste os demais campos e clique em *Adicionar Projeto*.")
                 st.rerun()
@@ -467,6 +467,7 @@ with tab_csv:
         data=template_csv,
         file_name="template_agile_estimator.csv",
         mime="text/csv",
+        icon=":material/download:",
     )
 
     st.markdown("---")
@@ -485,7 +486,7 @@ with tab_csv:
             st.dataframe(df_csv.head(10), use_container_width=True)
             st.caption(f"{len(df_csv)} projeto(s) encontrado(s) no arquivo.")
 
-            if st.button("Carregar este CSV", use_container_width=False):
+            if st.button("Carregar este CSV", icon=":material/upload:", use_container_width=False):
                 st.session_state.data = df_csv.copy()
                 st.session_state.last_source = "csv"
                 st.toast(f"{len(df_csv)} projeto(s) carregado(s)!", icon=None)
@@ -528,7 +529,7 @@ with tab_trello:
         if not re.match(trello_regex, trello_url):
             st.error("Link inválido. Utilize o formato: `https://trello.com/b/<board_id>`")
         else:
-            if st.button("Buscar projetos do Trello", use_container_width=False):
+            if st.button("Buscar projetos do Trello", icon=":material/search:", use_container_width=False):
                 with st.spinner("Buscando dados do Trello..."):
                     try:
                         df_trello = get_trello_cards_public(trello_url)
@@ -552,7 +553,7 @@ with tab_trello:
                 df_preview = st.session_state.trello_preview
                 st.dataframe(df_preview.head(10), use_container_width=True)
                 st.caption(f"{len(df_preview)} projeto(s) encontrado(s) no board.")
-                if st.button("Carregar estes projetos", use_container_width=False):
+                if st.button("Carregar estes projetos", icon=":material/download_done:", use_container_width=False):
                     st.session_state.data = df_preview.copy()
                     st.session_state.last_source = "trello"
                     st.session_state.pop("trello_preview", None)
@@ -571,7 +572,7 @@ if st.session_state.get("data") is not None:
         n = len(st.session_state.data)
         st.info(f"**{n} projeto(s)** carregado(s) — origem: **{source}**")
     with col_clear:
-        if st.button("Limpar dados", use_container_width=True):
+        if st.button("Limpar dados", icon=":material/delete_outline:", use_container_width=True):
             st.session_state.data = None
             st.session_state.last_source = None
             st.rerun()
@@ -581,7 +582,11 @@ if st.session_state.get("data") is not None:
 # ---------------------------------------------------------------
 if "data" in st.session_state and st.session_state.data is not None and not st.session_state.data.empty:
 
-    res_tab1, res_tab2, res_tab3 = st.tabs(["Dados", "Estimativas", "Visualizações"])
+    res_tab1, res_tab2, res_tab3 = st.tabs([
+        ":material/table_view: Dados",
+        ":material/bar_chart: Estimativas",
+        ":material/insights: Visualizações",
+    ])
 
     # -------------------------
     # TAB 1 — DADOS
@@ -602,7 +607,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
     with res_tab2:
         st.subheader("Calcular Esforço Total Estimado")
 
-        if st.button("Calcular Estimativa", key="calc_esforco"):
+        if st.button("Calcular Estimativa", icon=":material/calculate:", key="calc_esforco"):
             missing = validate_columns(st.session_state.data)
             if missing:
                 st.error(f"Colunas faltando: {', '.join(missing)}")
@@ -672,7 +677,8 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                     "Exportar Resultados (CSV)",
                     data=csv_bytes,
                     file_name="estimativas_esforco.csv",
-                    mime="text/csv"
+                    mime="text/csv",
+                    icon=":material/download:",
                 )
 
     # -------------------------
@@ -697,7 +703,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                 st.altair_chart(hist, use_container_width=True)
 
                 st.markdown("---")
-                st.subheader("Tamanho do Projeto × Esforço Estimado")
+                st.subheader(":material/scatter_plot: Tamanho do Projeto × Esforço Estimado")
                 st.caption("Este gráfico mostra como o tamanho funcional de cada projeto influencia a estimativa de esforço. Em geral, projetos maiores tendem a exigir mais tempo e recursos para serem desenvolvidos.")
 
                 scatter_fp = alt.Chart(data).mark_circle(size=80, opacity=0.8).encode(
@@ -712,7 +718,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                 st.altair_chart(scatter_fp, use_container_width=True)
 
                 st.markdown("---")
-                st.subheader("Complexidade Técnica × Esforço Estimado")
+                st.subheader(":material/bubble_chart: Complexidade Técnica × Esforço Estimado")
                 st.caption("Compare como a complexidade técnica dos projetos influencia o esforço previsto. Em geral, projetos com regras de negócio mais elaboradas, integrações e processamento mais complexo tendem a exigir mais esforço de desenvolvimento.")
 
                 scatter_cp = alt.Chart(data).mark_circle(size=80, opacity=0.8, color="#F4845F").encode(
@@ -728,7 +734,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
 
                 if len(data) > 1:
                     st.markdown("---")
-                    st.subheader("Comparação do Esforço entre Projetos")
+                    st.subheader(":material/bar_chart: Comparação do Esforço entre Projetos")
                     st.caption("Compare visualmente o esforço estimado para cada projeto analisado. Quanto maior a barra, maior o esforço previsto para sua implementação.")
 
                     bar_data = data.sort_values("effort_hours_previsto", ascending=False).head(30)
@@ -752,7 +758,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
 # ---------------------------------------------------------------
 # Sidebar
 # ---------------------------------------------------------------
-st.sidebar.title("Sobre o Agile Estimator")
+st.sidebar.title(":material/info: Sobre o Agile Estimator")
 st.sidebar.markdown("""
 **O que o Agile Estimator faz?**
 Utiliza Inteligência Artificial e técnicas de Machine Learning para estimar o esforço total necessário
