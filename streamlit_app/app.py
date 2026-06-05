@@ -12,7 +12,7 @@ from scripts_app.get_public_trello_board import get_trello_cards_public, REQUIRE
 # ---------------------------------------------------------------
 # Page config — must be the very first Streamlit call
 # ---------------------------------------------------------------
-st.set_page_config(page_title="Agile Estimator v2", layout="wide")
+st.set_page_config(page_title="Agile Estimator", layout="wide")
 
 # ---------------------------------------------------------------
 # CSS — dark-theme tooltip
@@ -41,9 +41,6 @@ PREP_DIR = os.path.join(BASE_DIR, "..", "api", "artifacts", "preprocessing")
 
 @st.cache_resource
 def load_artifacts():
-    # scaler_pca_features.pkl: StandardScaler for the 4 Maxwell Likert factors
-    # scaler_maxx.pkl: 9-feature Maxwell scaler; index 0 is function_points (mean=514.86, scale=516.24)
-    # The processed CSV already has standardized function_points, so inference must match that transform
     scaler    = joblib.load(os.path.join(PREP_DIR, "scaler_pca_features.pkl"))
     pca       = joblib.load(os.path.join(PREP_DIR, "pca_2.pkl"))
     scaler_fp = joblib.load(os.path.join(PREP_DIR, "scaler_maxx.pkl"))
@@ -65,12 +62,18 @@ BUSINESS_FEATURES = [
     "additional_complexity_factor",
 ]
 
-FEATURE_LABELS = {
-    "function_points":             "Function Points",
-    "performance_requirements":    "Performance Requirements",
-    "complex_processing":          "Complex Processing",
-    "installation_ease":           "Installation Ease",
-    "additional_complexity_factor":"Additional Complexity Factor",
+# Mapeamento de nomes internos para exibição ao usuário
+COLUMN_DISPLAY = {
+    "project_id":                   "Projeto",
+    "function_points":              "Tamanho do Projeto (AFP)",
+    "performance_requirements":     "Requisitos de Desempenho",
+    "complex_processing":           "Complexidade Técnica",
+    "installation_ease":            "Facilidade de Implantação",
+    "additional_complexity_factor": "Complexidade Adicional",
+    "effort_hours_previsto":        "Esforço Estimado (Horas)",
+    "dias_estimados":               "Dias Estimados",
+    "semanas_estimadas":            "Semanas Estimadas",
+    "Escala":                       "Comparação Visual",
 }
 
 # ---------------------------------------------------------------
@@ -82,7 +85,6 @@ def preprocess_for_api(row: dict) -> dict:
     X = pd.DataFrame([row])[BUSINESS_FEATURES].astype(float)
     X_scaled = scaler.transform(X)
     pcs = pca.transform(X_scaled)[0]
-    # function_points was standardized in the training CSV — inference must match that transform
     fp_std = (float(row["function_points"]) - FP_MEAN) / FP_SCALE
     return {
         "function_points": fp_std,
@@ -123,105 +125,141 @@ def estimate_batch(df: pd.DataFrame) -> pd.DataFrame:
 def validate_columns(df: pd.DataFrame) -> list[str]:
     return [c for c in REQUIRED_COLUMNS if c not in df.columns]
 
+
+def display_df(df: pd.DataFrame) -> pd.DataFrame:
+    """Rename internal column names to user-friendly display names."""
+    return df.rename(columns=COLUMN_DISPLAY)
+
 # ---------------------------------------------------------------
 # Page header
 # ---------------------------------------------------------------
-st.title("🚀 Agile Estimator v2")
-st.write("Estimativa de **esforço total de desenvolvimento** de projetos de software, baseada em IA.")
+st.title("🚀 Agile Estimator")
+st.write("Estime o esforço de projetos de software com o apoio de **Inteligência Artificial**.")
 
 # ---------------------------------------------------------------
 # Input tabs
 # ---------------------------------------------------------------
 tab_tutorial, tab_input, tab_csv, tab_trello = st.tabs([
-    "📖 Tutorial", "✏️ Input Manual", "📂 Upload CSV", "🔗 Capturar do Trello"
+    "ℹ️ Sobre o Agile Estimator",
+    "✏️ Inserir dados manualmente",
+    "📂 Importar CSV",
+    "🔗 Importar do Trello",
 ])
 
 # ===========================
-# TUTORIAL
+# SOBRE O AGILE ESTIMATOR
 # ===========================
 with tab_tutorial:
-    st.title("📖 Como usar o Agile Estimator v2")
+    st.title("ℹ️ Sobre o Agile Estimator")
     st.markdown("""
-    O **Agile Estimator v2** usa um modelo de Machine Learning treinado em dados reais de
-    projetos de software para estimar o **esforço total em horas-pessoa** necessário para
-    desenvolver um projeto do início ao fim.
+    O **Agile Estimator** utiliza Inteligência Artificial e técnicas de Machine Learning para estimar
+    o esforço total necessário para o desenvolvimento de projetos de software. As previsões são geradas
+    em horas-pessoa com base em dados históricos reais, validação estatística e na análise de múltiplos
+    fatores que influenciam a complexidade e o esforço de implementação, proporcionando suporte mais
+    consistente ao planejamento e à tomada de decisão em projetos de software.
 
     ---
     """)
 
-    st.subheader("🧠 Sobre o modelo")
+    st.subheader("📊 Sobre o modelo")
     st.markdown("""
-    O modelo foi treinado no dataset **Maxwell** (62 projetos reais de telecomunicações),
-    usando **Regressão Lasso** com validação cruzada repetida (RepeatedKFold).
+    As estimativas são geradas por um modelo de Inteligência Artificial treinado com dados reais de
+    projetos de software. Durante o desenvolvimento, diferentes técnicas de Machine Learning foram
+    avaliadas e comparadas para identificar a abordagem com melhor desempenho na previsão de esforço.
 
-    - **Variável-alvo:** `effort_hours` — esforço total do projeto em horas-pessoa
-    - **Algoritmo:** Lasso (melhor RMSE entre Ridge, Lasso, SVR, RandomForest, GradientBoosting)
-    - **MAPE médio:** ~49 % — útil como estimativa de baseline e comparação entre projetos
-    - **Redução de dimensionalidade:** PCA aplicado sobre 4 fatores de complexidade (explicando ~70 % da variância)
+    O modelo considera fatores relacionados ao tamanho e à complexidade do projeto, analisando padrões
+    observados em projetos anteriores para gerar uma estimativa do esforço total necessário para sua
+    implementação.
 
-    ---
+    As previsões devem ser utilizadas como apoio ao planejamento e à tomada de decisão, complementando
+    a experiência e o conhecimento da equipe do projeto.
     """)
 
-    st.subheader("📥 Inputs necessários")
+    st.markdown("---")
+    st.subheader("📋 Informações necessárias para gerar a estimativa")
+    st.markdown("Para calcular o esforço do projeto, informe os seguintes dados:")
+
     st.markdown("""
-    Você deve fornecer **5 valores** por projeto:
-
-    | Campo | Tipo | Descrição |
-    |-------|------|-----------|
-    | **Function Points** | Número livre | Tamanho funcional do software em Adjusted Function Points (AFP). Quanto maior, mais esforço esperado. |
-    | **Performance Requirements** | **Escala 1–5** | Quão exigente é o sistema em termos de desempenho e velocidade. |
-    | **Complex Processing** | **Escala 1–5** | Grau de complexidade do processamento técnico (algoritmos, cálculos, lógica de negócio). |
-    | **Installation Ease** | **Escala 1–5** | Facilidade de instalação e deploy. **Atenção: 5 = muito fácil, 1 = muito difícil**. |
-    | **Additional Complexity Factor** | **Escala 1–5** | Fatores adicionais de complexidade fora do escopo padrão. |
-
-    **Escala Likert (campos 2–5):**
-
-    | Valor | Significado |
-    |-------|-------------|
-    | 1 | Muito Baixo |
-    | 2 | Baixo |
-    | 3 | Médio |
-    | 4 | Alto |
-    | 5 | Muito Alto |
-
-    > 💡 **Dica:** Os 4 fatores de escala são transformados internamente por PCA (redução de dimensionalidade), que captura os padrões de complexidade do dataset Maxwell sem precisar de ajuste manual.
-
-    ---
+    | Campo | Como preencher | Descrição |
+    |-------|----------------|-----------|
+    | **Tamanho do Projeto (AFP)** | Número | Representa o tamanho do sistema. Quanto mais funcionalidades, telas, relatórios e integrações o projeto possuir, maior tende a ser o esforço necessário para desenvolvê-lo. |
+    | **Requisitos de Desempenho** | Escala de 1 a 5 | Indica o nível de exigência de desempenho do sistema. Utilize valores mais altos para aplicações que exigem alta velocidade de resposta, processamento intenso ou grande volume de usuários. |
+    | **Complexidade Técnica** | Escala de 1 a 5 | Representa a complexidade técnica do projeto, considerando regras de negócio, cálculos, algoritmos, integrações e processamento de dados. |
+    | **Facilidade de Implantação** | Escala de 1 a 5 | Indica o grau de facilidade para instalação e implantação da solução. **1 = muito difícil** e **5 = muito fácil**. |
+    | **Complexidade Adicional** | Escala de 1 a 5 | Considere fatores adicionais que possam aumentar a complexidade do projeto, como requisitos especiais, restrições técnicas, integrações complexas ou necessidades específicas do cliente. |
     """)
 
-    st.subheader("📊 Outputs")
+    st.markdown("---")
+    st.subheader("📈 Resultados da estimativa")
     st.markdown("""
-    Para cada projeto, o sistema retorna:
+    Após a análise dos dados informados, o Agile Estimator apresenta uma previsão do esforço necessário
+    para o projeto nos seguintes formatos:
 
-    | Coluna | Descrição |
-    |--------|-----------|
-    | **Esforço Previsto (h)** | Total de horas-pessoa estimado para desenvolver o projeto |
-    | **Dias Estimados** | Conversão: horas ÷ 8 (jornada diária), arredondado para cima |
-    | **Semanas Estimadas** | Conversão: dias ÷ 5 (semana útil), arredondado para cima |
+    | Resultado | Descrição |
+    |-----------|-----------|
+    | **Esforço Estimado (Horas)** | Quantidade total de horas-pessoa previstas para desenvolver o projeto do início ao fim. |
+    | **Dias Estimados** | Conversão do esforço total para dias de trabalho, considerando uma jornada de 8 horas por dia. |
+    | **Semanas Estimadas** | Conversão do esforço total para semanas úteis, considerando 5 dias de trabalho por semana. |
 
-    ---
+    💡 **Importante:** Os valores representam uma estimativa inicial para apoiar o planejamento do projeto.
+    O esforço real pode variar conforme fatores como tamanho da equipe, experiência dos profissionais,
+    mudanças de escopo, riscos e particularidades do ambiente de desenvolvimento.
     """)
 
-    st.subheader("⚠️ Limitações")
-    st.info("""
-    - O dataset de treino tem **62 projetos** — estimativas têm incerteza considerável (~49% MAPE).
-    - O modelo é mais confiável para **comparar projetos entre si** do que para prever esforço absoluto.
-    - Projetos muito fora do perfil de telecomunicações do dataset Maxwell podem ter estimativas menos precisas.
+    st.markdown("---")
+    st.subheader("⚠️ Limitações da estimativa")
+    st.markdown("""
+    - As estimativas fornecidas representam uma previsão inicial e devem ser utilizadas como apoio ao planejamento e à tomada de decisão.
+    - Como todo modelo preditivo, os resultados podem variar de acordo com as características específicas de cada projeto, equipe e contexto de desenvolvimento.
+    - A ferramenta tende a ser mais útil para comparar cenários e analisar o impacto de diferentes características do projeto do que para determinar um prazo exato de execução.
+    - Projetos com características muito diferentes dos projetos utilizados no treinamento do modelo podem apresentar maior variação nas estimativas.
+
+    💡 **Recomendação:** Utilize os resultados como uma referência inicial e combine-os com a experiência
+    da equipe, análise de riscos e conhecimento do negócio para obter estimativas mais robustas.
     """)
 
-    st.subheader("🔄 Fluxo de uso")
+    st.markdown("---")
+    st.subheader("🗂️ Como utilizar o Agile Estimator")
     st.markdown("""
-    1. Insira os dados do projeto (manual, CSV ou Trello).
-    2. Clique em **Calcular Esforço Total Estimado**.
-    3. Visualize os resultados e baixe o CSV.
-    4. Use a aba **Visualizações** para comparar projetos.
+    O processo é simples e pode ser realizado em poucos passos:
+    """)
+
+    st.markdown("""
+    **1️⃣ Informe os dados do projeto**
+
+    Escolha a forma mais conveniente para fornecer as informações:
+    - Preenchimento manual;
+    - Importação de arquivo CSV;
+    - Integração com um board do Trello.
+
+    **2️⃣ Gere a estimativa**
+
+    Clique em **Calcular Estimativa** para que a ferramenta analise os dados informados e processe a previsão de esforço.
+
+    **3️⃣ Analise os resultados**
+
+    Visualize a estimativa de esforço em:
+    - Horas-pessoa;
+    - Dias de trabalho;
+    - Semanas de projeto.
+
+    **4️⃣ Exporte ou compartilhe os dados**
+
+    Baixe os resultados em formato CSV para utilização em planejamentos, relatórios ou análises complementares.
+
+    **5️⃣ Compare diferentes cenários**
+
+    Utilize a aba **Visualizações** para analisar e comparar projetos, identificando diferenças de tamanho, complexidade e esforço estimado.
+
+    💡 **Dica:** Experimente alterar alguns parâmetros do projeto para entender como fatores como tamanho
+    funcional e complexidade podem impactar a estimativa final.
     """)
 
 # ===========================
 # INPUT MANUAL
 # ===========================
 with tab_input:
-    st.subheader("✏️ Inserir dados do projeto manualmente")
+    st.subheader("✏️ Inserir dados manualmente")
 
     if "input_user" not in st.session_state:
         st.session_state.input_user = {
@@ -237,7 +275,7 @@ with tab_input:
 
     with col1:
         project_id = st.text_input(
-            "🆔 ID do Projeto",
+            "🆔 Projeto",
             value=st.session_state.input_user["project_id"],
             help="Identificador único do projeto (ex: projeto_alpha)"
         )
@@ -245,48 +283,48 @@ with tab_input:
             project_id = f"projeto_{np.random.randint(100, 999)}"
 
         function_points = st.number_input(
-            "📐 Function Points",
+            "📐 Tamanho do Projeto (AFP)",
             min_value=0.0,
             value=float(st.session_state.input_user["function_points"]),
             step=10.0,
-            help="Tamanho funcional do software em Adjusted Function Points"
+            help="Tamanho funcional do software em Adjusted Function Points. Quanto mais funcionalidades, telas e integrações, maior tende a ser o valor."
         )
 
         performance_requirements = st.number_input(
-            "⚡ Performance Requirements (1–5)",
+            "⚡ Requisitos de Desempenho (1–5)",
             min_value=1.0,
             max_value=5.0,
             value=float(st.session_state.input_user["performance_requirements"]),
             step=0.5,
-            help="Escala Likert 1–5: exigência de desempenho/velocidade do sistema. 1=Muito Baixa, 5=Muito Alta."
+            help="Nível de exigência de desempenho do sistema. 1 = Muito Baixo, 5 = Muito Alto."
         )
 
     with col2:
         complex_processing = st.number_input(
-            "⚙️ Complex Processing (1–5)",
+            "⚙️ Complexidade Técnica (1–5)",
             min_value=1.0,
             max_value=5.0,
             value=float(st.session_state.input_user["complex_processing"]),
             step=0.5,
-            help="Escala Likert 1–5: grau de complexidade do processamento técnico. 1=Muito Baixo, 5=Muito Alto."
+            help="Complexidade técnica do projeto: regras de negócio, algoritmos, integrações. 1 = Muito Baixo, 5 = Muito Alto."
         )
 
         installation_ease = st.number_input(
-            "🚀 Installation Ease (1–5)",
+            "📦 Facilidade de Implantação (1–5)",
             min_value=1.0,
             max_value=5.0,
             value=float(st.session_state.input_user["installation_ease"]),
             step=0.5,
-            help="Escala Likert 1–5: facilidade de instalação/deploy. 1=Muito Difícil, 5=Muito Fácil. Atenção: maior valor = MENOS esforço neste campo."
+            help="Facilidade de instalação e implantação da solução. 1 = Muito Difícil, 5 = Muito Fácil."
         )
 
         additional_complexity_factor = st.number_input(
-            "🔧 Additional Complexity Factor (1–5)",
+            "🔧 Complexidade Adicional (1–5)",
             min_value=1.0,
             max_value=5.0,
             value=float(st.session_state.input_user["additional_complexity_factor"]),
             step=0.5,
-            help="Escala Likert 1–5: fatores adicionais de complexidade fora do escopo padrão. 1=Muito Baixo, 5=Muito Alto."
+            help="Fatores adicionais de complexidade: requisitos especiais, restrições técnicas, integrações complexas. 1 = Muito Baixo, 5 = Muito Alto."
         )
 
     st.session_state.input_user = {
@@ -334,13 +372,12 @@ with tab_input:
     st.markdown("---")
     with st.expander("🧮 Calculadora IFPUG de Function Points", expanded=False):
         st.markdown("""
-        Use esta calculadora para obter os **Adjusted Function Points (AFP)** do seu projeto
-        com base no método **IFPUG** — o mesmo padrão usado no dataset Maxwell.
+        Utilize esta calculadora para obter os **Adjusted Function Points (AFP)** do seu projeto
+        com base no método **IFPUG** — o mesmo padrão utilizado no dataset de treinamento do modelo.
 
         Conte quantas funções de cada tipo existem no projeto, separadas por complexidade (**Simples / Média / Complexa**):
         """)
 
-        # IFPUG weights table
         IFPUG_WEIGHTS = {
             "EI — External Input":          (3, 4, 6),
             "EO — External Output":         (4, 5, 7),
@@ -391,24 +428,48 @@ with tab_input:
                 st.info(f"AFP = UFP = **{ufp}** (sem ajuste VAF)")
 
         if ufp > 0:
-            if st.button("📋 Usar este valor como Function Points", key="use_fp_calc"):
+            if st.button("📋 Utilizar este valor como Tamanho do Projeto (AFP)", key="use_fp_calc"):
                 st.session_state.input_user["function_points"] = fp_result
-                st.success(f"✅ Function Points definido para **{fp_result}**. Ajuste os demais campos e clique em *Adicionar Projeto*.")
+                st.success(f"✅ Tamanho do Projeto definido para **{fp_result}**. Ajuste os demais campos e clique em *Adicionar Projeto*.")
                 st.rerun()
 
 # ===========================
 # UPLOAD CSV
 # ===========================
 with tab_csv:
-    st.subheader("📂 Carregar projetos via CSV")
+    st.subheader("📂 Importar projetos por arquivo CSV")
     st.markdown("""
-    O CSV deve conter as colunas abaixo (coluna `project_id` é opcional):
+    Envie um arquivo CSV contendo as informações dos projetos que deseja analisar.
+    A ferramenta processará automaticamente cada registro e gerará as estimativas correspondentes.
 
-    ```
-    project_id, function_points, performance_requirements, complex_processing, installation_ease, additional_complexity_factor
-    ```
+    **Campos obrigatórios:**
+    - `function_points`
+    - `performance_requirements`
+    - `complex_processing`
+    - `installation_ease`
+    - `additional_complexity_factor`
+
+    **Campo opcional:**
+    - `project_id` (nome ou identificador do projeto)
+
+    💡 **Dica:** Utilize o campo `project_id` para facilitar a identificação dos projetos nos resultados,
+    gráficos e relatórios exportados.
     """)
 
+    # Template download
+    template_df = pd.DataFrame(columns=[
+        "project_id", "function_points", "performance_requirements",
+        "complex_processing", "installation_ease", "additional_complexity_factor"
+    ])
+    template_csv = template_df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "📥 Baixar Template de CSV",
+        data=template_csv,
+        file_name="template_agile_estimator.csv",
+        mime="text/csv",
+    )
+
+    st.markdown("---")
     uploaded_file = st.file_uploader("Selecione o arquivo CSV", type="csv")
 
     if uploaded_file is not None:
@@ -438,9 +499,23 @@ with tab_csv:
 with tab_trello:
     st.subheader("🔗 Importar projetos do Trello")
     st.markdown("""
-    Cole o link de um board **público** do Trello. Os cartões devem conter campos customizados com os nomes:
-    `Function Points`, `Performance Requirements`, `Complex Processing`, `Installation Ease`, `Additional Complexity Factor`.
+    Importe automaticamente as informações dos projetos a partir de um board do Trello.
+    Basta informar o link de um **board público** e a ferramenta irá analisar os cartões
+    para gerar as estimativas de esforço.
+
+    **Para que a importação funcione corretamente, cada cartão deve possuir os seguintes campos personalizados:**
+    - Function Points
+    - Performance Requirements
+    - Complex Processing
+    - Installation Ease
+    - Additional Complexity Factor
+
+    💡 **Dica:** Utilize um cartão para cada projeto que deseja estimar. Os resultados serão
+    gerados automaticamente após a importação dos dados.
     """)
+
+    st.markdown("**🔗 Link do Board Trello**")
+    st.markdown("Cole abaixo a URL do board público que deseja analisar.")
 
     trello_url = st.text_input(
         "URL do board",
@@ -451,7 +526,7 @@ with tab_trello:
 
     if trello_url:
         if not re.match(trello_regex, trello_url):
-            st.error("❌ Link inválido. Use o formato: `https://trello.com/b/<board_id>`")
+            st.error("❌ Link inválido. Utilize o formato: `https://trello.com/b/<board_id>`")
         else:
             if st.button("🔍 Buscar projetos do Trello", use_container_width=False):
                 with st.spinner("Buscando dados do Trello..."):
@@ -462,7 +537,7 @@ with tab_trello:
                         if missing:
                             st.warning(
                                 f"⚠️ Campos não encontrados nos cartões: {', '.join(missing)}. "
-                                "Verifique os nomes dos custom fields no board."
+                                "Verifique os nomes dos campos personalizados no board."
                             )
                         elif df_trello.dropna(subset=REQUIRED_COLUMNS).empty:
                             st.warning("⚠️ Nenhum cartão com todos os campos preenchidos foi encontrado.")
@@ -516,7 +591,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
         display_cols = [c for c in ["project_id"] + REQUIRED_COLUMNS
                         if c in st.session_state.data.columns]
         st.dataframe(
-            st.session_state.data[display_cols].head(100),
+            display_df(st.session_state.data[display_cols].head(100)),
             use_container_width=True
         )
         st.caption(f"Total de projetos: **{len(st.session_state.data)}**")
@@ -527,7 +602,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
     with res_tab2:
         st.subheader("⚡ Calcular Esforço Total Estimado")
 
-        if st.button("🚀 Calcular Esforço Total Estimado", key="calc_esforco"):
+        if st.button("🚀 Calcular Estimativa", key="calc_esforco"):
             missing = validate_columns(st.session_state.data)
             if missing:
                 st.error(f"❌ Colunas faltando: {', '.join(missing)}")
@@ -565,28 +640,36 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                 st.warning("⚠️ Nenhuma estimativa disponível. Tente novamente — a API pode estar aquecendo (cold start ~30s).")
             else:
                 st.markdown("### 📈 Resultados")
-                fmt = {"effort_hours_previsto": lambda x: f"{x:.0f} h" if pd.notna(x) else "-"}
+
+                # Renomeia para exibição
+                preview_display = display_df(preview)
+                fmt_col = COLUMN_DISPLAY.get("effort_hours_previsto", "effort_hours_previsto")
+                fmt = {fmt_col: lambda x: f"{x:.0f} h" if pd.notna(x) else "-"}
                 st.dataframe(
-                    preview.style.format(fmt),
+                    preview_display.style.format(fmt),
                     use_container_width=True
                 )
 
                 st.markdown("""
-                #### ℹ️ O que cada coluna significa
+                #### ℹ️ Como interpretar os resultados
 
-                | Coluna | Descrição |
-                |--------|-----------|
-                | **Esforço Previsto (h)** | Total de horas-pessoa estimado para desenvolver o projeto completo |
-                | **Dias Estimados** | Horas ÷ 8 horas/dia útil, arredondado para cima |
-                | **Semanas Estimadas** | Dias ÷ 5 dias úteis/semana, arredondado para cima |
-                | **Escala** | Comparação visual relativa entre projetos |
+                | Resultado | Descrição |
+                |-----------|-----------|
+                | **Esforço Estimado (Horas)** | Quantidade total de horas-pessoa previstas para desenvolver o projeto do início ao fim. |
+                | **Dias Estimados** | Conversão do esforço total para dias de trabalho, considerando uma jornada de 8 horas por dia. |
+                | **Semanas Estimadas** | Conversão do esforço total para semanas úteis, considerando 5 dias de trabalho por semana. |
+                | **Comparação Visual** | Representação visual que facilita a comparação do esforço estimado entre diferentes projetos analisados. |
 
-                > ⚠️ O esforço estimado representa o **projeto inteiro**, não uma sprint individual.
+                💡 **Importante:** As estimativas representam o esforço total necessário para a conclusão do projeto
+                e devem ser utilizadas como apoio ao planejamento e à tomada de decisão.
+
+                ⚠️ **Atenção:** Os valores apresentados referem-se ao projeto completo e não a uma sprint,
+                tarefa específica ou período isolado de desenvolvimento.
                 """)
 
                 csv_bytes = data[[c for c in preview_cols if c in data.columns]].to_csv(index=False).encode("utf-8")
                 st.download_button(
-                    "📥 Baixar resultados (CSV)",
+                    "📥 Exportar Resultados (CSV)",
                     data=csv_bytes,
                     file_name="estimativas_esforco.csv",
                     mime="text/csv"
@@ -604,43 +687,40 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
             if data.empty:
                 st.warning("⚠️ Nenhum resultado disponível para visualização.")
             else:
-                st.subheader("📊 Distribuição do Esforço Estimado")
-                st.caption("Distribuição do esforço total previsto entre os projetos analisados.")
-
                 hist = alt.Chart(data).mark_bar().encode(
                     x=alt.X("effort_hours_previsto:Q",
                             bin=alt.Bin(maxbins=20),
-                            title="Esforço Previsto (horas)"),
+                            title="Esforço Estimado (Horas)"),
                     y=alt.Y("count()", title="Nº de Projetos"),
                     tooltip=["count()"]
                 ).properties(height=350)
                 st.altair_chart(hist, use_container_width=True)
 
                 st.markdown("---")
-                st.subheader("📐 Function Points × Esforço Previsto")
-                st.caption("Quanto maior o tamanho funcional, maior tende a ser o esforço. Verifique se a relação faz sentido para seus projetos.")
+                st.subheader("📐 Tamanho do Projeto × Esforço Estimado")
+                st.caption("Este gráfico mostra como o tamanho funcional de cada projeto influencia a estimativa de esforço. Em geral, projetos maiores tendem a exigir mais tempo e recursos para serem desenvolvidos.")
 
                 scatter_fp = alt.Chart(data).mark_circle(size=80, opacity=0.8).encode(
-                    x=alt.X("function_points:Q", title="Function Points"),
-                    y=alt.Y("effort_hours_previsto:Q", title="Esforço Previsto (h)"),
+                    x=alt.X("function_points:Q", title="Tamanho do Projeto (AFP)"),
+                    y=alt.Y("effort_hours_previsto:Q", title="Esforço Estimado (h)"),
                     tooltip=[
                         alt.Tooltip("project_id:N", title="Projeto"),
-                        alt.Tooltip("function_points:Q", title="Function Points"),
+                        alt.Tooltip("function_points:Q", title="Tamanho do Projeto (AFP)"),
                         alt.Tooltip("effort_hours_previsto:Q", title="Esforço (h)", format=".0f"),
                     ]
                 ).properties(height=350)
                 st.altair_chart(scatter_fp, use_container_width=True)
 
                 st.markdown("---")
-                st.subheader("⚙️ Complex Processing × Esforço Previsto")
-                st.caption("O fator de complexidade técnica captura uma parte significativa do esforço via PCA.")
+                st.subheader("⚙️ Complexidade Técnica × Esforço Estimado")
+                st.caption("Compare como a complexidade técnica dos projetos influencia o esforço previsto. Em geral, projetos com regras de negócio mais elaboradas, integrações e processamento mais complexo tendem a exigir mais esforço de desenvolvimento.")
 
                 scatter_cp = alt.Chart(data).mark_circle(size=80, opacity=0.8, color="#F4845F").encode(
-                    x=alt.X("complex_processing:Q", title="Complex Processing"),
-                    y=alt.Y("effort_hours_previsto:Q", title="Esforço Previsto (h)"),
+                    x=alt.X("complex_processing:Q", title="Complexidade Técnica"),
+                    y=alt.Y("effort_hours_previsto:Q", title="Esforço Estimado (h)"),
                     tooltip=[
                         alt.Tooltip("project_id:N", title="Projeto"),
-                        alt.Tooltip("complex_processing:Q", title="Complex Processing"),
+                        alt.Tooltip("complex_processing:Q", title="Complexidade Técnica"),
                         alt.Tooltip("effort_hours_previsto:Q", title="Esforço (h)", format=".0f"),
                     ]
                 ).properties(height=350)
@@ -648,8 +728,8 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
 
                 if len(data) > 1:
                     st.markdown("---")
-                    st.subheader("📊 Comparativo de Esforço por Projeto")
-                    st.caption("Barras ordenadas por esforço estimado — facilita priorização e comparação entre projetos.")
+                    st.subheader("📊 Comparação do Esforço entre Projetos")
+                    st.caption("Compare visualmente o esforço estimado para cada projeto analisado. Quanto maior a barra, maior o esforço previsto para sua implementação.")
 
                     bar_data = data.sort_values("effort_hours_previsto", ascending=False).head(30)
                     bar = alt.Chart(bar_data).mark_bar().encode(
@@ -657,7 +737,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                                 sort="-y",
                                 title="Projeto",
                                 axis=alt.Axis(labelAngle=-30)),
-                        y=alt.Y("effort_hours_previsto:Q", title="Esforço Previsto (h)"),
+                        y=alt.Y("effort_hours_previsto:Q", title="Esforço Estimado (h)"),
                         color=alt.Color("effort_hours_previsto:Q",
                                         scale=alt.Scale(scheme="blues"),
                                         legend=None),
@@ -670,27 +750,37 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                     st.altair_chart(bar, use_container_width=True)
 
 # ---------------------------------------------------------------
-# Sidebar FAQ
+# Sidebar
 # ---------------------------------------------------------------
-st.sidebar.title("ℹ️ FAQ")
+st.sidebar.title("ℹ️ Sobre o Agile Estimator")
 st.sidebar.markdown("""
-**O que o Agile Estimator v2 faz?**
-Estima o **esforço total** (em horas-pessoa) para desenvolver um projeto de software, usando IA treinada em dados reais.
+**O que o Agile Estimator faz?**
+Utiliza Inteligência Artificial e técnicas de Machine Learning para estimar o esforço total necessário
+para o desenvolvimento de projetos de software. As previsões são geradas em horas-pessoa com base em
+dados históricos reais, validação estatística e na análise de múltiplos fatores que influenciam a
+complexidade e o esforço de implementação.
 
-**Qual a diferença para a v1?**
-A v1 previa produtividade por sprint. A v2 prediz esforço total do projeto, usando um modelo mais robusto com validação cruzada e PCA.
+---
 
-**Como usar?**
-1. Insira os dados (manual, CSV ou Trello).
-2. Clique em **Calcular Esforço Total Estimado**.
-3. Visualize e baixe os resultados.
+**Como utilizar?**
+1. Informe os dados do projeto (manual, CSV ou Trello).
+2. Clique em **Calcular Estimativa**.
+3. Visualize e exporte os resultados.
 
-**O que são Function Points?**
-Uma métrica de tamanho funcional de software, independente de tecnologia. Representa a quantidade de funcionalidade entregue ao usuário.
+---
 
-**Qual a precisão do modelo?**
-MAPE médio ~49%. Use como estimativa inicial e para comparação relativa entre projetos.
+**O que são Function Points (Pontos de Função)?**
+Pontos de Função são uma forma de medir o tamanho de um software com base nas funcionalidades que ele
+oferece aos usuários. Quanto mais telas, relatórios, integrações e recursos o sistema possuir, maior
+tende a ser sua quantidade de Pontos de Função e, consequentemente, o esforço necessário para desenvolvê-lo.
+
+---
+
+**Qual a confiabilidade das estimativas?**
+A ferramenta oferece estimativas iniciais baseadas em padrões identificados em projetos reais de software.
+Como todo modelo preditivo, os resultados podem variar conforme as características de cada projeto e devem
+ser utilizados como complemento à análise e experiência da equipe.
 """)
 
 st.markdown("---")
-st.caption("Agile Estimator v2 — © 2025 Todos os direitos reservados.")
+st.caption("Agile Estimator v2 — © 2026 Todos os direitos reservados.")
