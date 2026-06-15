@@ -693,6 +693,9 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
             if data.empty:
                 st.warning("Nenhum resultado disponível para visualização.")
             else:
+                st.subheader(":material/bar_chart: Distribuição do Esforço Estimado entre Projetos")
+                st.caption("Este gráfico mostra como o esforço estimado se distribui entre os projetos analisados. Cada barra representa a quantidade de projetos que se enquadra em uma determinada faixa de horas. Use-o para identificar se os projetos analisados são semelhantes em esforço ou se há grande variação entre eles.")
+
                 hist = alt.Chart(data).mark_bar().encode(
                     x=alt.X("effort_hours_previsto:Q",
                             bin=alt.Bin(maxbins=20),
@@ -704,7 +707,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
 
                 st.markdown("---")
                 st.subheader(":material/scatter_plot: Tamanho do Projeto × Esforço Estimado")
-                st.caption("Este gráfico mostra como o tamanho funcional de cada projeto influencia a estimativa de esforço. Em geral, projetos maiores tendem a exigir mais tempo e recursos para serem desenvolvidos.")
+                st.caption("Este gráfico mostra a relação entre o tamanho funcional de cada projeto e o esforço estimado para desenvolvê-lo. Cada ponto representa um projeto: quanto mais à direita, maior o seu tamanho funcional (AFP); quanto mais acima, maior o esforço previsto. Use-o para verificar se projetos maiores tendem a exigir mais horas de desenvolvimento.")
 
                 scatter_fp = alt.Chart(data).mark_circle(size=80, opacity=0.8).encode(
                     x=alt.X("function_points:Q", title="Tamanho do Projeto (AFP)"),
@@ -719,7 +722,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
 
                 st.markdown("---")
                 st.subheader(":material/bubble_chart: Complexidade Técnica × Esforço Estimado")
-                st.caption("Compare como a complexidade técnica dos projetos influencia o esforço previsto. Em geral, projetos com regras de negócio mais elaboradas, integrações e processamento mais complexo tendem a exigir mais esforço de desenvolvimento.")
+                st.caption("Este gráfico mostra como a complexidade técnica de cada projeto influencia o esforço estimado. Cada ponto representa um projeto: quanto mais à direita, maior a sua complexidade técnica; quanto mais acima, maior o esforço previsto. Use-o para avaliar se projetos com regras de negócio mais elaboradas, integrações ou processamentos complexos tendem a demandar mais tempo de desenvolvimento.")
 
                 scatter_cp = alt.Chart(data).mark_circle(size=80, opacity=0.8, color="#F4845F").encode(
                     x=alt.X("complex_processing:Q", title="Complexidade Técnica"),
@@ -735,7 +738,7 @@ if "data" in st.session_state and st.session_state.data is not None and not st.s
                 if len(data) > 1:
                     st.markdown("---")
                     st.subheader(":material/bar_chart: Comparação do Esforço entre Projetos")
-                    st.caption("Compare visualmente o esforço estimado para cada projeto analisado. Quanto maior a barra, maior o esforço previsto para sua implementação.")
+                    st.caption("Este gráfico apresenta uma barra para cada projeto analisado, com altura proporcional ao esforço estimado em horas. Quanto mais alta a barra, maior o esforço previsto para desenvolver aquele projeto. Os projetos são exibidos em ordem decrescente de esforço (da esquerda para a direita) facilitando a identificação imediata dos projetos mais e menos complexos. Use-o para comparar projetos entre si e apoiar decisões de priorização, alocação de equipe e definição de prazos.")
 
                     bar_data = data.sort_values("effort_hours_previsto", ascending=False).head(30)
                     bar = alt.Chart(bar_data).mark_bar().encode(
@@ -789,4 +792,4 @@ ser utilizados como complemento à análise e experiência da equipe.
 """)
 
 st.markdown("---")
-st.caption("Agile Estimator v2 — © 2026 Todos os direitos reservados.")
+st.caption("Agile Estimator — © 2026 Todos os direitos reservados.")
