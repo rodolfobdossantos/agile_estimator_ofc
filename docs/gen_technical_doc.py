@@ -4,7 +4,7 @@ Documentacao tecnica completa cobrindo os Marcos 1-5.
 """
 from fpdf import FPDF
 
-TODAY = "11/05/2026"
+TODAY = "15/06/2026"
 OUT  = "docs/documentacao_tecnica_agile_estimator_v2.pdf"
 BLUE  = (25,  55, 115)
 DBLUE = (10,  30,  80)
@@ -104,8 +104,28 @@ class Doc(FPDF):
         self.set_text_color(35, 35, 35)
         self.cell(0, 6, "  " + val, new_x="LMARGIN", new_y="NEXT")
 
+    def _cell_lines(self, text, col_width, size=9):
+        """Estima quantas linhas o texto ocupa dentro de col_width."""
+        self.set_font("Helvetica", "", size)
+        available = max(col_width - 3, 1)
+        space_w = self.get_string_width(" ")
+        lines, line_w = 1, 0
+        for word in str(text).split():
+            w = self.get_string_width(word)
+            if line_w == 0:
+                line_w = w
+            elif line_w + space_w + w <= available:
+                line_w += space_w + w
+            else:
+                lines += 1
+                line_w = w
+        return lines
+
     def tbl(self, headers, rows, widths, row_height=6):
-        """Tabela formatada."""
+        """Tabela com celulas que colapsam (quebram) o texto automaticamente."""
+        PAD = 1.5  # padding horizontal interno
+
+        # --- cabecalho ---
         self.set_font("Helvetica", "B", 9)
         self.set_fill_color(*BLUE)
         self.set_text_color(*WHITE)
@@ -115,14 +135,42 @@ class Doc(FPDF):
         for h, w in zip(headers, widths):
             self.cell(w, 7, h, border=1, fill=True)
         self.ln()
-        self._text()
+
+        # --- linhas de dados ---
         for i, row in enumerate(rows):
-            self.set_fill_color(243, 247, 255) if i % 2 == 0 else self.set_fill_color(*WHITE)
-            self.set_text_color(30, 30, 30)
-            self._reset_x()
+            fill_rgb = (243, 247, 255) if i % 2 == 0 else (255, 255, 255)
+
+            # altura da linha = maior numero de linhas necessarias
+            max_lines = max(
+                self._cell_lines(str(val), w - 2 * PAD)
+                for val, w in zip(row, widths)
+            )
+            actual_h = max(max_lines * row_height, row_height)
+
+            if self.get_y() + actual_h > self.page_break_trigger:
+                self.add_page()
+
+            y0 = self.get_y()
+            x0 = self.l_margin
+
+            # 1) fundo + borda do retangulo de cada celula
+            self.set_fill_color(*fill_rgb)
+            self.set_draw_color(160, 175, 210)
+            for w in widths:
+                self.rect(x0, y0, w, actual_h, style="FD")
+                x0 += w
+
+            # 2) texto com multi_cell (quebra automatica)
+            x0 = self.l_margin
             for val, w in zip(row, widths):
-                self.cell(w, row_height, str(val), border=1, fill=True)
-            self.ln()
+                self.set_xy(x0 + PAD, y0 + 1)
+                self.set_font("Helvetica", "", 9)
+                self.set_text_color(30, 30, 30)
+                self.multi_cell(w - 2 * PAD, row_height, str(val), border=0, align="L")
+                x0 += w
+
+            self.set_y(y0 + actual_h)
+
         self.ln(2)
 
     def code(self, text):
@@ -202,6 +250,7 @@ meta = [
     ("Data do documento", TODAY),
     ("Repositorio", "rodolfobdossantos/agile_estimator_ofc (GitHub)"),
     ("API em producao", "https://agile-estimator-ofc.onrender.com"),
+    ("MLflow UI (experimentos)", "https://agile-estimator-mlflow.onrender.com"),
 ]
 for k, v in meta:
     doc.set_font("Helvetica", "B", 11)
@@ -327,6 +376,34 @@ doc.p(
     "com a abordagem IFPUG de estimativa."
 )
 
+doc.sub("1.1.1  Analise Comparativa e Criterios de Selecao")
+doc.p(
+    "Durante a fase de Engenharia de Dados (Marco 1), todos os cinco datasets foram "
+    "carregados, inspecionados e avaliados quanto a compatibilidade com a abordagem "
+    "IFPUG adotada no projeto. A tabela abaixo resume os criterios de avaliacao e "
+    "justifica a escolha do Maxwell como dataset exclusivo de treino:"
+)
+doc.tbl(
+    ["Dataset", "Metrica de Tamanho", "Fatores de Complexidade", "Compatibilidade IFPUG", "Decisao"],
+    [
+        ["Maxwell",    "AFP (Adjusted FP)", "4 TCAs em escala Likert 1-5",         "Total",   "SELECIONADO"],
+        ["China",      "AFP",               "Ausentes / esquema diferente",         "Parcial", "Descartado"],
+        ["Desharnais", "UFP (nao ajustado)","Schema de complexidade incompativel",  "Baixa",   "Descartado"],
+        ["NASA93",     "KDSI (linhas)",     "COCOMO (VL/L/N/H/VH) - nao Likert",   "Nenhuma", "Descartado"],
+        ["ISBSG",      "Misto (FP/SNAP)",   "Inconsistente entre projetos",         "Baixa",   "Descartado"],
+    ],
+    [26, 38, 60, 36, 30],
+)
+doc.p(
+    "O Maxwell foi o unico dataset que ofereceu simultaneamente: (1) tamanho funcional "
+    "em AFP compativel com IFPUG, (2) fatores de ajuste tecnico (T03, T09, T11, T15) em "
+    "escala Likert 1-5 sem valores ausentes, e (3) variavel-alvo effort_hours em horas-pessoa "
+    "brutas. Os demais datasets foram explorados em notebooks de EDA disponíveis em "
+    "model/notebooks/inferencia/agile_v2/data_modelling.ipynb, que registra a analise "
+    "comparativa completa com os criterios de descarte de cada dataset."
+)
+doc.ln(2)
+
 doc.sub("1.2  Colunas do Dataset Maxwell e Mapeamento")
 doc.tbl(
     ["Coluna Original", "Nome Canonico", "Tipo", "Descricao"],
@@ -442,7 +519,7 @@ doc.code(
 )
 
 doc.sub("1.4  Dataset Processado")
-doc.p("O dataset final (model/data/raw/maxx_processed.csv) contem 57 linhas e 14 colunas:")
+doc.p("O dataset final (model/data/processed/maxx_processed.csv) contem 57 linhas e 14 colunas:")
 doc.li("function_points  - padronizado")
 doc.li("effort_hours     - log(esforco original)")
 doc.li("customer_participation, logical_complexity, requirements_volatility, "
@@ -457,7 +534,7 @@ doc.tbl(
         ["scaler_pca_features.pkl", "api/artifacts/preprocessing/", "StandardScaler fitado nos 4 fatores Likert"],
         ["pca_2.pkl",               "api/artifacts/preprocessing/", "PCA n=2 fitado nos 4 fatores padronizados"],
         ["scaler_maxx.pkl",         "api/artifacts/preprocessing/", "Scaler Maxwell; indice 0 = function_points"],
-        ["maxx_processed.csv",      "model/data/raw/",              "Dataset limpo e transformado, 57 x 14"],
+        ["maxx_processed.csv",      "model/data/processed/",        "Dataset limpo e transformado, 57 x 14"],
     ],
     [55, 60, 75],
 )
@@ -584,6 +661,34 @@ doc.p(
     "ATENCAO: o notebook foi corrigido para usar grid.best_estimator_ ao salvar o "
     "artefato final. O bug original re-fazia o fit com alpha=1.0 (padrao sklearn), "
     "zerando todos os coeficientes Lasso."
+)
+
+doc.sub2("MLflow UI em Producao (entrega adicional)")
+doc.p(
+    "Como entrega adicional, o historico completo de experimentos MLflow esta "
+    "publicado e acessivel via browser, sem necessidade de instalar nada localmente. "
+    "O servico roda em um container Docker separado, hospedado no Render.com:"
+)
+doc.tbl(
+    ["Atributo", "Detalhe"],
+    [
+        ["URL publica",       "https://agile-estimator-mlflow.onrender.com"],
+        ["O que pode ser visto",
+         "Todos os runs de treino (Ridge, Lasso, SVR, RF, GBM), "
+         "hiperparametros do GridSearchCV, metricas MAE/RMSE/R2/MAPE, "
+         "artefatos .pkl de cada experimento e comparativo visual entre algoritmos"],
+        ["Infraestrutura",    "Docker (mlflow_server/Dockerfile) + Render Web Service"],
+        ["Autenticacao",      "Nenhuma -- acesso publico somente leitura"],
+        ["Cold start",        "~30s apos inatividade (plano gratuito)"],
+    ],
+    [42, 148],
+)
+doc.p(
+    "O MLflow UI permite ao cliente visualizar de forma transparente todo o processo "
+    "de selecao do modelo: quais algoritmos foram avaliados, com quais parametros, "
+    "quais metricas cada um obteve e por que o Lasso foi selecionado. "
+    "Esta transparencia e um diferencial importante para auditorias e para futuras "
+    "decisoes de retreinamento."
 )
 
 doc.sub("2.7  Interpretabilidade com SHAP")
@@ -876,7 +981,7 @@ doc.code(
     "\n"
     "# 5. POST /predict\n"
     'payload  = {"function_points": fp_std, "PC1": PC1, "PC2": PC2}\n'
-    "resp     = requests.post(API_URL, json=payload, timeout=30)\n"
+    "resp     = requests.post(API_URL, json=payload, timeout=60)\n"
     "effort_h = float(resp.json()['prediction'])  # horas-pessoa"
 )
 
@@ -982,7 +1087,7 @@ doc.tbl(
     [
         ["Dados",          "Tabela com project_id e os 5 campos de entrada; contagem de projetos"],
         ["Estimativas",    "Botao 'Calcular'; tabela com horas, dias (h/8), semanas (dias/5); barra visual; download CSV"],
-        ["Visualizacoes",  "Histograma do esforco; scatter FP x esforco; scatter complexidade x esforco; bar chart comparativo"],
+        ["Visualizacoes",  "4 graficos com titulos e textos descritivos: (1) Distribuicao do Esforco Estimado entre Projetos -- histograma por faixa de horas; (2) Tamanho do Projeto x Esforco Estimado -- scatter AFP vs. horas; (3) Complexidade Tecnica x Esforco Estimado -- scatter complex_processing vs. horas; (4) Comparacao do Esforco entre Projetos -- barras em ordem decrescente de esforco (exibido apenas quando ha mais de 1 projeto)"],
     ],
     [35, 155],
 )
@@ -1078,15 +1183,29 @@ doc.sec("Instrucoes de Operacao")
 
 doc.sub("Acessar o Sistema em Producao")
 doc.tbl(
-    ["Recurso", "URL"],
+    ["Recurso", "URL / Como acessar"],
     [
-        ["Interface Streamlit",  "Disponivel via Streamlit Cloud ou instancia propria"],
-        ["API REST",             "https://agile-estimator-ofc.onrender.com/predict"],
-        ["Health Check",         "https://agile-estimator-ofc.onrender.com/health"],
-        ["Swagger UI",           "https://agile-estimator-ofc.onrender.com/docs"],
-        ["Board Trello demo",    "https://trello.com/b/DKf6KNh2/testeagileestimator"],
+        ["Interface Streamlit",
+         "Disponivel via Streamlit Cloud ou instancia propria"],
+        ["API REST",
+         "https://agile-estimator-ofc.onrender.com/predict"],
+        ["Health Check da API",
+         "https://agile-estimator-ofc.onrender.com/health"],
+        ["Swagger UI (documentacao interativa da API)",
+         "https://agile-estimator-ofc.onrender.com/docs"],
+        ["MLflow UI -- historico de experimentos ML (entrega adicional)",
+         "https://agile-estimator-mlflow.onrender.com"],
+        ["Board Trello demo",
+         "https://trello.com/b/DKf6KNh2/testeagileestimator"],
     ],
-    [45, 145],
+    [65, 125],
+)
+doc.p(
+    "O MLflow UI (https://agile-estimator-mlflow.onrender.com) e uma entrega "
+    "adicional: permite ao cliente visualizar, de forma publica e sem autenticacao, "
+    "todos os experimentos de Machine Learning realizados durante o Marco 2 -- "
+    "incluindo os 5 algoritmos avaliados, seus hiperparametros, metricas e o "
+    "comparativo que justificou a escolha do Lasso como modelo final."
 )
 
 doc.sub("Usar a Interface Streamlit")
@@ -1148,6 +1267,178 @@ doc.li(
     "entre projetos, nao como compromisso contratual absoluto."
 )
 
+# ====================================================================
+# TESTES E VALIDACOES
+# ====================================================================
+doc.add_page()
+doc.sec("Testes e Validacoes Finais")
+doc.p(
+    "Esta secao documenta os testes executados para validar os endpoints da API, "
+    "o pipeline de pre-processamento e os fluxos de integracao do sistema. "
+    "Os testes automatizados estao implementados em tests/test_api.py e "
+    "tests/test_pipeline.py e podem ser executados com pytest."
+)
+
+doc.sub("Matriz de Testes")
+doc.tbl(
+    ["#", "Teste", "Como Executar", "Resultado Esperado"],
+    [
+        ["1", "GET /health",
+         "curl https://agile-estimator-ofc.onrender.com/health",
+         "HTTP 200 | status: ok | model_loaded, inference_ok: true"],
+        ["2", "POST /predict (payload valido)",
+         'curl -X POST .../predict -d \'{"function_points":-0.029,"PC1":0.52,"PC2":-0.31}\'',
+         "HTTP 200 | {\"prediction\": float > 0} | valor entre 100h e 50.000h"],
+        ["3", "POST /predict (payload invalido)",
+         'curl -X POST .../predict -d \'{"function_points": "alto","PC1":0.5,"PC2":0}\'',
+         "HTTP 422 | Pydantic ValidationError -- campo nao e float"],
+        ["4", "POST /predict (campos ausentes)",
+         'curl -X POST .../predict -d \'{"function_points":-0.029}\'',
+         "HTTP 422 | Pydantic ValidationError -- PC1 e PC2 obrigatorios"],
+        ["5", "Swagger UI / docs",
+         "Abrir https://agile-estimator-ofc.onrender.com/docs no browser",
+         "Interface Swagger com /predict e /health documentados e funcionais"],
+        ["6", "Streamlit -> API (input manual)",
+         "Preencher formulario manual e clicar Calcular Esforco",
+         "Estimativa em horas exibida; graficos renderizados; download CSV disponivel"],
+        ["7", "Upload CSV",
+         "Upload de CSV com colunas obrigatorias; clicar Carregar este CSV",
+         "Preview 10 linhas exibido; apos confirmacao, estimativas calculadas em lote"],
+        ["8", "Integracao Trello",
+         "Colar URL do board publico (trello.com/b/DKf6KNh2/...); Buscar projetos",
+         "Cards importados como DataFrame; estimativas calculadas por projeto"],
+        ["9", "Docker local",
+         "cd api && docker-compose up --build; curl localhost:8000/health",
+         "Container sobe em < 60s; /health retorna status ok"],
+        ["10", "Sensibilidade do modelo",
+         "pytest tests/test_api.py::test_predict_larger_fp_gives_more_effort -v",
+         "Projeto com FP maior retorna mais horas -- coeficiente positivo confirmado"],
+    ],
+    [8, 44, 72, 66],
+    row_height=7,
+)
+
+doc.sub("Testes Automatizados (pytest)")
+doc.p(
+    "Os testes automatizados cobrem 20 cenarios divididos em dois modulos:"
+)
+doc.tbl(
+    ["Modulo", "Testes", "O que cobre"],
+    [
+        ["tests/test_api.py",      "11 testes", "/health (5), /predict valido (5), /predict invalido (3)"],
+        ["tests/test_pipeline.py", "9 testes",  "Artefatos (3), scaler FP (2), shapes (2), modelo (2), ponta a ponta (2)"],
+    ],
+    [52, 28, 110],
+)
+doc.code(
+    "# Instalar dependencias de desenvolvimento\n"
+    "pip install -r requirements-dev.txt\n"
+    "pip install -r api/requirements.txt\n\n"
+    "# Rodar todos os testes\n"
+    "pytest tests/ -v\n\n"
+    "# Saida esperada: 20 passed in < 5s"
+)
+
+# ====================================================================
+# GUIA DE VALIDACAO OPERACIONAL
+# ====================================================================
+doc.add_page()
+doc.sec("Guia de Validacao Operacional")
+doc.p(
+    "Guia rapido para validar os principais fluxos do sistema em ambiente local "
+    "ou em producao. Siga os passos em ordem para uma validacao completa."
+)
+
+doc.sub("1. Subir o Sistema Localmente")
+doc.sub2("Opcao A -- Com Docker (recomendado)")
+doc.code(
+    "git clone https://github.com/rodolfobdossantos/agile_estimator_ofc.git\n"
+    "cd agile_estimator_ofc/api\n"
+    "docker-compose up --build\n"
+    "# API disponivel em http://localhost:8000"
+)
+doc.sub2("Opcao B -- Sem Docker")
+doc.code(
+    "cd agile_estimator_ofc/api\n"
+    "pip install -r requirements.txt\n"
+    "uvicorn app.main:app --reload --port 8000\n"
+    "# API disponivel em http://localhost:8000"
+)
+
+doc.sub("2. Validar a API")
+doc.code(
+    "# Health check\n"
+    "curl http://localhost:8000/health\n"
+    "# Esperado: {\"status\": \"ok\", \"checks\": {\"model_loaded\": true, ...}}\n\n"
+    "# Predicao com payload valido (FP=500, fatores medianos)\n"
+    "curl -X POST http://localhost:8000/predict \\\n"
+    "     -H \"Content-Type: application/json\" \\\n"
+    "     -d '{\"function_points\": -0.029, \"PC1\": 0.52, \"PC2\": -0.31}'\n"
+    "# Esperado: {\"prediction\": <float entre 1000 e 10000>}\n\n"
+    "# Swagger UI: abrir http://localhost:8000/docs no browser"
+)
+
+doc.sub("3. Testar o Streamlit")
+doc.p(
+    "Inicie a aplicacao Streamlit apontando para a API local ou de producao:"
+)
+doc.code(
+    "cd agile_estimator_ofc/streamlit_app\n"
+    "pip install streamlit altair requests joblib scikit-learn\n"
+    "streamlit run app.py\n"
+    "# Acesse http://localhost:8501"
+)
+doc.li("Navegue ate a aba Input Manual (icone de formulario)")
+doc.li("Preencha: Function Points=500, demais fatores=3. Clique Adicionar Projeto")
+doc.li("Va para a aba Estimativas e clique Calcular Esforco Total Estimado")
+doc.li("Resultado esperado: estimativa em horas + dias + semanas + graficos Altair")
+
+doc.sub("4. Testar Upload CSV")
+doc.p("Crie um arquivo sample.csv com o conteudo abaixo e faca upload na aba CSV:")
+doc.code(
+    "project_id,function_points,performance_requirements,complex_processing,installation_ease,additional_complexity_factor\n"
+    "projeto_alpha,450,3,4,3,3\n"
+    "projeto_beta,800,4,5,2,4\n"
+    "projeto_gamma,220,2,2,5,1"
+)
+doc.li("Clique em Browse files e selecione o CSV")
+doc.li("Visualize o preview de 10 linhas e clique Carregar este CSV")
+doc.li("Va para Estimativas e calcule -- esperado: 3 projetos com estimativas distintas")
+
+doc.sub("5. Validar Integracao Trello")
+doc.code(
+    "# Board de demonstracao publico:\n"
+    "https://trello.com/b/DKf6KNh2/testeagileestimator"
+)
+doc.li("Na aba Trello, cole a URL acima e clique Buscar projetos do Trello")
+doc.li("Confirme com Carregar estes projetos")
+doc.li("Esperado: cards importados com os 5 campos customizados preenchidos")
+doc.li("Va para Estimativas e calcule -- cada card do Trello vira uma linha de resultado")
+
+doc.sub("6. Inferencia Ponta a Ponta (Producao)")
+doc.p(
+    "Para validar o fluxo completo em producao, simule o mesmo calculo que o "
+    "Streamlit executa internamente antes de chamar a API:"
+)
+doc.code(
+    "# Passo 1: FP raw 500 -> padronizado\n"
+    "fp_std = (500 - 514.8596) / 516.2373  # = -0.0287\n\n"
+    "# Passo 2: fatores Likert 3,4,3,3 -> scaler -> PCA\n"
+    "# (usar scaler_pca_features.pkl + pca_2.pkl)\n"
+    "# PC1 ~= 0.52, PC2 ~= -0.31  (varia conforme fatores)\n\n"
+    "# Passo 3: chamar API de producao\n"
+    "curl -X POST https://agile-estimator-ofc.onrender.com/predict \\\n"
+    "     -H \"Content-Type: application/json\" \\\n"
+    "     -d '{\"function_points\": -0.0287, \"PC1\": 0.52, \"PC2\": -0.31}'\n\n"
+    "# Resultado esperado: {\"prediction\": ~4500.0}  # horas-pessoa\n"
+    "# Range Maxwell: 583h (min) a 18.500h (max) | mediana 4.557h"
+)
+doc.p(
+    "Observacao: a primeira requisicao apos 15 minutos de inatividade leva ~30s "
+    "(cold start do plano gratuito do Render). Chame GET /health antes para "
+    "aquecer a instancia."
+)
+
 doc.sec("Inventario Completo de Artefatos")
 doc.tbl(
     ["Artefato", "Caminho no Repositorio", "Descricao"],
@@ -1158,7 +1449,7 @@ doc.tbl(
         ["scaler_pca_features.pkl","api/artifacts/preprocessing/",     "StandardScaler fitado nos 4 fatores Likert (57 projetos)"],
         ["scaler_maxx.pkl",        "api/artifacts/preprocessing/",     "Scaler Maxwell 9 features; indice 0=function_points"],
         ["features.json",          "api/artifacts/metadata/",          "Metadados: features, pipeline, metricas, dataset"],
-        ["maxx_processed.csv",     "model/data/raw/",                  "Dataset limpo e transformado (57x14)"],
+        ["maxx_processed.csv",     "model/data/processed/",             "Dataset limpo e transformado (57x14)"],
         ["modelagem-ml.ipynb",     "model/notebooks/treino/agile_v2/", "Notebook treino com GridSearchCV e MLflow"],
         ["eda.ipynb",              "model/notebooks/inferencia/agile_v2/", "EDA: correlacoes, outliers, PCA, selecao de features"],
         ["data_modelling.ipynb",   "model/notebooks/inferencia/agile_v2/", "Analise exploratoria de datasets benchmark"],
@@ -1172,6 +1463,11 @@ doc.tbl(
         ["docker-compose.yml",     "api/",                             "restart: always para reinicio automatico"],
         ["TECHNICAL_DOCUMENTATION.md", "docs/",                       "Este documento em formato Markdown"],
         ["BUSINESS_DOCUMENTATION.md",  "docs/",                       "Documentacao de negocio e proposta comercial"],
+        ["Dockerfile",                 "mlflow_server/",               "MLflow UI -- deploy no Render como Web Service"],
+        ["README_DEPLOY.md",           "mlflow_server/",               "Instrucoes de deploy do MLflow UI no Render"],
+        ["test_api.py",                "tests/",                       "11 testes automatizados dos endpoints FastAPI"],
+        ["test_pipeline.py",           "tests/",                       "9 testes do pipeline de pre-processamento"],
+        ["requirements-dev.txt",       "/",                            "Dependencias de desenvolvimento (pytest, httpx)"],
     ],
     [52, 60, 78],
     row_height=6,
